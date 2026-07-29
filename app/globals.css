@@ -1,0 +1,685 @@
+/* Primer Primitives — design tokens (CSS custom properties).
+   These imports establish the token + theme baseline that every Primer
+   component and all of our own CSS reads from. Order matters: base + functional
+   tokens first, then the per-theme functional color sets. */
+@import '@primer/primitives/dist/css/base/size/size.css';
+@import '@primer/primitives/dist/css/base/typography/typography.css';
+@import '@primer/primitives/dist/css/base/motion/motion.css';
+@import '@primer/primitives/dist/css/functional/size/border.css';
+@import '@primer/primitives/dist/css/functional/size/breakpoints.css';
+@import '@primer/primitives/dist/css/functional/size/size-coarse.css';
+@import '@primer/primitives/dist/css/functional/size/size-fine.css';
+@import '@primer/primitives/dist/css/functional/size/size.css';
+@import '@primer/primitives/dist/css/functional/size/viewport.css';
+@import '@primer/primitives/dist/css/functional/typography/typography.css';
+
+@import '@primer/primitives/dist/css/functional/themes/light.css';
+@import '@primer/primitives/dist/css/functional/themes/dark.css';
+@import '@primer/primitives/dist/css/functional/themes/dark-dimmed.css';
+
+/* Ahrok brand accent — a restrained construction orange used sparingly
+   on top of Primer's near-black surfaces and warm off-white text. */
+:root {
+  --ahrok-accent: #e8702a;
+  --ahrok-accent-muted: rgba(232, 112, 42, 0.12);
+  --ahrok-accent-border: rgba(232, 112, 42, 0.32);
+}
+
+/* Make Ahrok orange the primary brand accent everywhere Primer would
+   otherwise render its default green "primary" buttons or blue accent
+   links. Green (success) and yellow (attention) tokens are intentionally
+   left untouched so they stay reserved for positive / in-progress states.
+   These selectors mirror Primer's own theme selectors so — being declared
+   after the theme imports — they win at equal specificity. A slightly
+   deeper orange is used for filled surfaces so white text keeps an
+   AA-compliant contrast ratio (~4.8:1). */
+[data-color-mode='dark'][data-dark-theme='dark'],
+[data-color-mode='auto'][data-light-theme='dark'] {
+  --button-primary-bgColor-rest: #b8541a;
+  --button-primary-bgColor-hover: #a34712;
+  --button-primary-bgColor-active: #90400f;
+  --button-primary-bgColor-disabled: #5f3a1e;
+  --button-primary-borderColor-disabled: #5f3a1e;
+
+  --fgColor-accent: #e8702a;
+  --bgColor-accent-emphasis: #b8541a;
+  --borderColor-accent-emphasis: #b8541a;
+}
+
+[data-color-mode='light'][data-light-theme='light'],
+[data-color-mode='auto'][data-dark-theme='light'] {
+  --button-primary-bgColor-rest: #b8541a;
+  --button-primary-bgColor-hover: #a34712;
+  --button-primary-bgColor-active: #90400f;
+  --button-primary-bgColor-disabled: #d8b79f;
+  --button-primary-borderColor-disabled: #d8b79f;
+
+  /* Darker orange on light backgrounds keeps link text AA-readable. */
+  --fgColor-accent: #b8541a;
+  --bgColor-accent-emphasis: #b8541a;
+  --borderColor-accent-emphasis: #b8541a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100vh;
+  background-color: var(--bgColor-default);
+  color: var(--fgColor-default);
+  font-family: var(
+    --fontStack-system,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif
+  );
+}
+
+#__next {
+  min-height: 100vh;
+}
+
+/* Privacy Center: stacked on mobile, TOC sidebar on wider screens. */
+.privacy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 48px;
+  padding-top: 48px;
+  padding-bottom: 80px;
+}
+
+.privacy-toc {
+  order: -1;
+}
+
+@media (min-width: 900px) {
+  .privacy-layout {
+    grid-template-columns: 240px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* FieldRelay interactive demo — self-contained brand system.          */
+/* Charcoal surfaces, burnt-orange accent, warm off-white type.        */
+/* Scoped under .fr-demo so it never leaks into the Ahrok (Primer) UI. */
+/* ------------------------------------------------------------------ */
+.fr-demo {
+  --fr-bg: #1f1c19;
+  --fr-surface: #29251f;
+  --fr-surface-raised: #322d26;
+  --fr-border: #433c33;
+  --fr-border-strong: #564d42;
+  --fr-accent: #e2632a;
+  --fr-accent-hover: #c8511d;
+  --fr-accent-soft: rgba(226, 99, 42, 0.14);
+  --fr-success: #5cc46a;
+  --fr-success-soft: rgba(63, 185, 80, 0.16);
+  --fr-text: #f4efe7;
+  --fr-text-muted: #b6ab9c;
+  --fr-text-faint: #8a8072;
+
+  /* Map the shared mobile-shell tokens to FieldRelay's palette so the
+     reusable phone frame + bottom nav render in-brand. */
+  --app-bg: var(--fr-bg);
+  --app-fg: var(--fr-text);
+  --app-surface: var(--fr-surface);
+  --app-accent: var(--fr-accent);
+  --app-accent-on: #1a120c;
+  --app-nav-bg: var(--fr-surface);
+  --app-nav-border: var(--fr-border);
+  --app-nav-fg: var(--fr-text-faint);
+  --app-nav-active: var(--fr-accent);
+
+  color: var(--fr-text);
+  font-family: var(
+    --fontStack-system,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif
+  );
+}
+
+.fr-demo *,
+.fr-demo *::before,
+.fr-demo *::after {
+  box-sizing: border-box;
+}
+
+.fr-card {
+  background-color: var(--fr-surface);
+  border: 1px solid var(--fr-border);
+  border-radius: 14px;
+}
+
+.fr-input,
+.fr-select,
+.fr-textarea {
+  width: 100%;
+  background-color: var(--fr-bg);
+  border: 1px solid var(--fr-border-strong);
+  border-radius: 8px;
+  color: var(--fr-text);
+  font: inherit;
+  font-size: 14px;
+  padding: 9px 12px;
+}
+
+.fr-textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.fr-input::placeholder,
+.fr-textarea::placeholder {
+  color: var(--fr-text-faint);
+}
+
+.fr-input:focus-visible,
+.fr-select:focus-visible,
+.fr-textarea:focus-visible,
+.fr-btn:focus-visible,
+.fr-icon-btn:focus-visible {
+  outline: 2px solid var(--fr-accent);
+  outline-offset: 2px;
+}
+
+.fr-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fr-text-muted) 50%),
+    linear-gradient(135deg, var(--fr-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.fr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fr-btn-primary {
+  background-color: var(--fr-accent);
+  color: #1a120c;
+}
+
+.fr-btn-primary:hover {
+  background-color: var(--fr-accent-hover);
+  color: #fff;
+}
+
+.fr-btn-ghost {
+  background-color: transparent;
+  color: var(--fr-text);
+  border-color: var(--fr-border-strong);
+}
+
+.fr-btn-ghost:hover {
+  background-color: var(--fr-surface-raised);
+}
+
+.fr-btn-quiet {
+  background-color: transparent;
+  color: var(--fr-text-muted);
+  border-color: transparent;
+  padding: 6px 8px;
+  font-weight: 500;
+}
+
+.fr-btn-quiet:hover {
+  color: var(--fr-text);
+  background-color: var(--fr-surface-raised);
+}
+
+.fr-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--fr-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.fr-icon-btn:hover {
+  background-color: var(--fr-surface-raised);
+  color: var(--fr-text);
+}
+
+.fr-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.fr-project-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.fr-form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .fr-stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .fr-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 900px) {
+  .fr-project-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Product card mock preview — a crisp, on-theme fake app screenshot. */
+.product-preview {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--borderColor-default);
+  background: linear-gradient(160deg, #15171c 0%, #0e1014 100%);
+  aspect-ratio: 16 / 9;
+}
+
+/* ================================================================== */
+/* Shared mobile-app demo shell.                                       */
+/* Desktop: the app is shown inside a realistic phone frame.           */
+/* Mobile: the frame is removed and the app fills the viewport.        */
+/* Each demo sets its palette via --app-* vars on the .demo-app root.  */
+/* ================================================================== */
+.demo-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 28px 20px;
+  background: radial-gradient(
+    120% 85% at 50% -10%,
+    #22252c 0%,
+    #15171b 55%,
+    #0d0e11 100%
+  );
+}
+
+.demo-phone {
+  position: relative;
+  width: 392px;
+  max-width: 100%;
+  height: 836px;
+  max-height: calc(100dvh - 56px);
+  padding: 13px;
+  border-radius: 52px;
+  background: linear-gradient(150deg, #2c2e34 0%, #0c0d0f 100%);
+  box-shadow:
+    0 50px 90px -30px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.55);
+}
+
+.demo-notch {
+  position: absolute;
+  top: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 134px;
+  height: 26px;
+  background: #050608;
+  border-radius: 0 0 16px 16px;
+  z-index: 6;
+}
+
+.demo-screen {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  border-radius: 39px;
+  overflow: hidden;
+  background-color: var(--app-bg, #16140f);
+}
+
+.demo-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--app-bg);
+  color: var(--app-fg);
+  font-family: var(
+    --fontStack-system,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif
+  );
+}
+
+.demo-app *,
+.demo-app *::before,
+.demo-app *::after {
+  box-sizing: border-box;
+}
+
+/* Primer's BaseStyles colors all <a> with its blue accent; inside the
+   self-branded demos, links should inherit the app's own palette. */
+.demo-app a {
+  color: inherit;
+}
+
+.demo-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.demo-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 7px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--app-nav-bg);
+  border-top: 1px solid var(--app-nav-border);
+}
+
+.demo-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: var(--app-nav-fg);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.15s ease;
+}
+
+.demo-nav-item[aria-current='page'] {
+  color: var(--app-nav-active);
+}
+
+.demo-nav-add-slot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+}
+
+.demo-nav-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  margin-top: -18px;
+  border-radius: 50%;
+  border: 4px solid var(--app-nav-bg);
+  background-color: var(--app-accent);
+  color: var(--app-accent-on);
+  cursor: pointer;
+  box-shadow: 0 10px 20px -8px var(--app-accent);
+  transition: transform 0.12s ease;
+}
+
+.demo-nav-add:active {
+  transform: scale(0.94);
+}
+
+.demo-nav-add-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--app-nav-fg);
+}
+
+.demo-nav-add-slot[data-active='true'] .demo-nav-add-label {
+  color: var(--app-nav-active);
+}
+
+/* A subtle logo "chip" so brand wordmarks designed for light/photo
+   backgrounds stay legible inside an app header. */
+.demo-logo-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding-inline: 11px;
+  border-radius: 9px;
+  background-color: #f1ede6;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .demo-stage {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+  .demo-phone {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .demo-notch {
+    display: none;
+  }
+  .demo-screen {
+    border-radius: 0;
+  }
+}
+
+/* ================================================================== */
+/* NYCMC Yard Sale demo — warm, friendly inventory app.                */
+/* Cream + light-green surfaces, leaf/teal green from the logo, warm   */
+/* amber for low-stock attention. Scoped under .nycmc-demo.            */
+/* ================================================================== */
+.nycmc-demo {
+  --nm-bg: #f4efe2;
+  --nm-surface: #ffffff;
+  --nm-surface-alt: #eef3df;
+  --nm-border: #e6ddc9;
+  --nm-border-strong: #d6cbb2;
+  --nm-green: #3f8f3e;
+  --nm-green-hover: #347a33;
+  --nm-green-deep: #2f6b4f;
+  --nm-green-soft: #e6f0d3;
+  --nm-amber: #c0772a;
+  --nm-amber-soft: #f6e8d4;
+  --nm-text: #2c2e26;
+  --nm-text-muted: #6f6c5f;
+  --nm-text-faint: #9a9582;
+
+  --app-bg: var(--nm-bg);
+  --app-fg: var(--nm-text);
+  --app-surface: var(--nm-surface);
+  --app-accent: var(--nm-green);
+  --app-accent-on: #ffffff;
+  --app-nav-bg: #ffffff;
+  --app-nav-border: var(--nm-border);
+  --app-nav-fg: #9a9582;
+  --app-nav-active: var(--nm-green-deep);
+
+  color: var(--nm-text);
+}
+
+.nm-card {
+  background-color: var(--nm-surface);
+  border: 1px solid var(--nm-border);
+  border-radius: 16px;
+}
+
+.nm-input,
+.nm-select,
+.nm-textarea {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid var(--nm-border-strong);
+  border-radius: 10px;
+  color: var(--nm-text);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.nm-textarea {
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.5;
+}
+
+.nm-input::placeholder,
+.nm-textarea::placeholder {
+  color: var(--nm-text-faint);
+}
+
+.nm-input:focus-visible,
+.nm-select:focus-visible,
+.nm-textarea:focus-visible,
+.nm-btn:focus-visible,
+.nm-icon-btn:focus-visible {
+  outline: 2px solid var(--nm-green);
+  outline-offset: 2px;
+}
+
+.nm-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--nm-text-muted) 50%),
+    linear-gradient(135deg, var(--nm-text-muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) calc(50% - 2px),
+    calc(100% - 10px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.nm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nm-btn-primary {
+  background-color: var(--nm-green);
+  color: #ffffff;
+}
+
+.nm-btn-primary:hover {
+  background-color: var(--nm-green-hover);
+}
+
+.nm-btn-soft {
+  background-color: var(--nm-green-soft);
+  color: var(--nm-green-deep);
+}
+
+.nm-btn-soft:hover {
+  background-color: #dcebc4;
+}
+
+.nm-btn-ghost {
+  background-color: #ffffff;
+  color: var(--nm-text);
+  border-color: var(--nm-border-strong);
+}
+
+.nm-btn-ghost:hover {
+  background-color: var(--nm-surface-alt);
+}
+
+.nm-btn-quiet {
+  background-color: transparent;
+  color: var(--nm-text-muted);
+  border-color: transparent;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+
+.nm-btn-quiet:hover {
+  color: var(--nm-text);
+  background-color: var(--nm-surface-alt);
+}
+
+.nm-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--nm-text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nm-icon-btn:hover {
+  background-color: var(--nm-surface-alt);
+  color: var(--nm-text);
+}
