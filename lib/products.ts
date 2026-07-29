@@ -42,7 +42,7 @@ export const products: Product[] = [
     demoBadge: 'Interactive Demo',
     ctaLabel: 'Explore Interactive Demo',
     ctaHref: '/demos/fieldrelay',
-    learnMoreHref: '/roadmap',
+    learnMoreHref: '/fieldrelay',
   },
   {
     slug: 'nycmc-yard-sale',
