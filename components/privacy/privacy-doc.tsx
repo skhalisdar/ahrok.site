@@ -12,10 +12,12 @@ export function PrivacyHero({
   eyebrow,
   title,
   intro,
+  lastUpdated = 'June 26, 2026',
 }: {
   eyebrow: string
   title: string
   intro: ReactNode
+  lastUpdated?: string
 }) {
   return (
     <section
@@ -63,7 +65,7 @@ export function PrivacyHero({
               {intro}
             </Text>
             <Text size="small" style={{ color: 'var(--fgColor-muted)' }}>
-              Last updated: June 26, 2026.
+              Last updated: {lastUpdated}.
             </Text>
           </Stack>
         </div>
