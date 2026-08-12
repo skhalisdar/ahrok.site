@@ -6,46 +6,46 @@ import { Container } from '@/components/container'
 import { PrivacyHero, P } from '@/components/privacy/privacy-doc'
 
 export const metadata: Metadata = {
-  title: 'Privacy Center | Ahrok LLC',
+  title: 'Terms Center | Ahrok LLC',
   description:
-    'The Ahrok LLC Privacy Center explains how privacy information applies to Ahrok and its products, with links to product-specific privacy policies.',
+    'Terms of Use for Ahrok LLC products, including FieldRelay, iNeedNotary, and NYCMC Yard Sale.',
 }
 
-const policies = [
+const terms = [
   {
-    href: '/privacy/fieldrelay',
-    name: 'FieldRelay Privacy Policy',
+    href: '/terms/fieldrelay',
+    name: 'FieldRelay Terms of Use',
     description: 'Construction coordination and project-management platform.',
   },
   {
-    href: '/privacy/ineednotary',
-    name: 'iNeedNotary Privacy Policy',
+    href: '/terms/ineednotary',
+    name: 'iNeedNotary Terms of Use',
     description: 'Remote notarization and apostille service platform.',
   },
   {
-    href: '/privacy/nycmc-yard-sale',
-    name: 'NYCMC Yard Sale Privacy Policy',
+    href: '/terms/nycmc-yard-sale',
+    name: 'NYCMC Yard Sale Terms of Use',
     description: 'Inventory, storefront, ordering, and event-pickup app.',
   },
 ]
 
-export default function PrivacyCenterPage() {
+export default function TermsCenterPage() {
   return (
     <main>
       <PrivacyHero
-        eyebrow="Privacy"
-        title="Privacy Center"
-        intro="Ahrok LLC develops practical software products for real-world businesses. Each product has its own privacy policy because the information it handles and the services it provides are different."
+        eyebrow="Legal"
+        title="Terms Center"
+        intro="Ahrok LLC products serve different purposes, so each product has its own Terms of Use. Select the product you use to review the terms that apply."
         lastUpdated="August 11, 2026"
       />
 
       <Container narrow>
         <div style={{ paddingTop: 48, paddingBottom: 80 }}>
           <Stack direction="vertical" gap="spacious">
-            <section aria-labelledby="policies-heading">
+            <section aria-labelledby="terms-heading">
               <Heading
                 as="h2"
-                id="policies-heading"
+                id="terms-heading"
                 style={{
                   fontSize: 22,
                   letterSpacing: '-0.01em',
@@ -53,15 +53,11 @@ export default function PrivacyCenterPage() {
                   marginBottom: 16,
                 }}
               >
-                Product privacy policies
+                Product terms
               </Heading>
               <Stack direction="vertical" gap="normal">
-                {policies.map((policy) => (
-                  <Link
-                    key={policy.href}
-                    href={policy.href}
-                    style={{ textDecoration: 'none' }}
-                  >
+                {terms.map((item) => (
+                  <Link key={item.href} href={item.href} style={{ textDecoration: 'none' }}>
                     <div
                       style={{
                         display: 'flex',
@@ -98,17 +94,11 @@ export default function PrivacyCenterPage() {
                           <LawIcon size={20} fill="var(--ahrok-accent)" />
                         </span>
                         <div style={{ minWidth: 0 }}>
-                          <Text
-                            weight="semibold"
-                            style={{ display: 'block', color: 'var(--fgColor-default)' }}
-                          >
-                            {policy.name}
+                          <Text weight="semibold" style={{ display: 'block' }}>
+                            {item.name}
                           </Text>
-                          <Text
-                            size="small"
-                            style={{ color: 'var(--fgColor-muted)' }}
-                          >
-                            {policy.description}
+                          <Text size="small" style={{ color: 'var(--fgColor-muted)' }}>
+                            {item.description}
                           </Text>
                         </div>
                       </div>
@@ -117,27 +107,6 @@ export default function PrivacyCenterPage() {
                   </Link>
                 ))}
               </Stack>
-            </section>
-
-            <section aria-labelledby="scope-heading">
-              <Heading
-                as="h2"
-                id="scope-heading"
-                style={{
-                  fontSize: 22,
-                  letterSpacing: '-0.01em',
-                  fontWeight: 600,
-                  marginBottom: 12,
-                }}
-              >
-                How these policies apply
-              </Heading>
-              <P>
-                The product-specific policy for the Ahrok product you use controls
-                how personal information is handled for that product. If a product
-                links to a third-party service, that provider may also have its own
-                privacy policy.
-              </P>
             </section>
 
             <section aria-labelledby="contact-heading">
@@ -151,17 +120,18 @@ export default function PrivacyCenterPage() {
                   marginBottom: 12,
                 }}
               >
-                Privacy contact
+                Legal contact
               </Heading>
               <P>
-                Contact{' '}
-                <Link
-                  href="mailto:privacy@ahrok.site"
-                  style={{ color: 'var(--ahrok-accent)' }}
-                >
-                  privacy@ahrok.site
+                Questions about these terms may be submitted through the{' '}
+                <Link href="/contact" style={{ color: 'var(--ahrok-accent)' }}>
+                  Ahrok contact page
                 </Link>{' '}
-                with privacy questions, access requests, or deletion requests.
+                or by email at{' '}
+                <Link href="mailto:hello@ahrok.site" style={{ color: 'var(--ahrok-accent)' }}>
+                  hello@ahrok.site
+                </Link>
+                .
               </P>
             </section>
           </Stack>
