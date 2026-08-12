@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Text } from '@primer/react'
 import {
   PrivacyHero,
   PrivacyBody,
@@ -12,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: 'NYCMC Yard Sale Privacy Policy | Ahrok LLC',
   description:
-    'Privacy policy for NYCMC Yard Sale, an inventory-management app developed by Ahrok LLC.',
+    'Privacy policy for NYCMC Yard Sale, an inventory, storefront, ordering, and event-pickup app developed by Ahrok LLC.',
 }
 
 const PrivacyEmail = () => (
@@ -23,91 +22,115 @@ const PrivacyEmail = () => (
 
 const sections: PrivacySection[] = [
   {
-    id: 'who-we-are',
-    title: 'Who We Are',
-    content: <P>NYCMC Yard Sale is an app developed by Ahrok LLC.</P>,
-  },
-  {
-    id: 'information-collected',
-    title: 'Information the App May Collect',
+    id: 'scope',
+    title: 'Scope and Who We Are',
     content: (
-      <BulletList
-        items={[
-          'Account information, such as email address and name, when a user creates or uses an account.',
-          'Inventory information entered by the user, such as item names, quantities, prices, locations, descriptions, and sales records.',
-          'Photos a user chooses to add to inventory items through the device camera or photo library.',
-          'Basic technical information necessary to operate, secure, and maintain the app.',
-        ]}
-      />
+      <P>
+        NYCMC Yard Sale is an inventory, storefront, ordering, and event-pickup
+        application developed by Ahrok LLC. This policy explains how information is
+        handled when staff members manage inventory and when shoppers browse or place
+        orders through the public storefront.
+      </P>
     ),
   },
   {
-    id: 'how-used',
-    title: 'How Information Is Used',
+    id: 'information-collected',
+    title: 'Information We Collect',
     content: (
       <>
-        <P>The information is used to:</P>
+        <P>Depending on how you use the app, we may collect:</P>
         <BulletList
           items={[
-            'Provide inventory-management features.',
-            'Authenticate users and maintain account access.',
-            'Store and display inventory records and item photos.',
-            'Maintain app security, reliability, and support.',
+            'Staff account information, such as name, email address, and authentication information.',
+            'Inventory and sales information, such as item names, quantities, prices, descriptions, locations, stock adjustments, sales records, and staff accountability records.',
+            'Photos staff members choose to add to inventory items through a device camera or photo library.',
+            'Shopper and order information needed to complete a purchase or pickup, such as contact information, items ordered, quantities, order status, payment status, and pickup information.',
+            'Payment transaction references and status. Full payment-card details are processed by Stripe and are not stored directly by NYCMC Yard Sale.',
+            'Basic technical and security information necessary to operate, protect, and troubleshoot the application.',
           ]}
         />
       </>
     ),
   },
   {
-    id: 'storage-providers',
-    title: 'Storage and Service Providers',
+    id: 'how-used',
+    title: 'How We Use Information',
     content: (
-      <P>
-        NYCMC Yard Sale uses Supabase as a backend service provider for
-        authentication, database storage, and image storage.
-      </P>
+      <BulletList
+        items={[
+          'Authenticate staff and provide inventory-management and accountability features.',
+          'Display approved items in the public storefront.',
+          'Create, process, track, and fulfill customer orders and event-day pickups.',
+          'Record stock changes, sales, payment status, and pickup completion.',
+          'Operate, secure, troubleshoot, maintain, and improve the app.',
+          'Provide support and communicate about orders when necessary.',
+          'Prevent fraud, misuse, and unauthorized access and comply with applicable law.',
+        ]}
+      />
     ),
   },
   {
-    id: 'sharing',
-    title: 'Sharing',
+    id: 'service-providers',
+    title: 'Service Providers and Sharing',
+    content: (
+      <>
+        <P>Ahrok LLC does not sell personal information. We may share information with:</P>
+        <BulletList
+          items={[
+            'Supabase, which provides backend infrastructure including authentication, database, and image storage services.',
+            'Stripe, which processes customer payments and provides payment-status information needed to complete orders.',
+            'Other vendors that provide hosting, security, communications, or support services on our behalf.',
+            'Government authorities or other parties when disclosure is required by law or necessary to protect rights or safety.',
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: 'payments',
+    title: 'Payments',
     content: (
       <P>
-        Ahrok LLC does not sell personal information. Information is shared only
-        with service providers necessary to operate the app, such as Supabase,
-        or when required by law.
+        Online payment-card information is submitted to and processed by Stripe under
+        Stripe&apos;s own privacy practices. NYCMC Yard Sale receives transaction and
+        payment-status information needed to associate a successful payment with the
+        corresponding order.
       </P>
     ),
   },
   {
     id: 'retention',
-    title: 'Data Retention',
+    title: 'Data Retention and Deletion',
     content: (
       <P>
-        Information is retained for as long as needed to provide the app,
-        maintain records, meet legal obligations, resolve disputes, and enforce
-        agreements.
+        Information is retained for as long as reasonably necessary to operate the app,
+        fulfill orders, maintain inventory and transaction records, protect against
+        fraud, meet legal or accounting obligations, resolve disputes, and enforce
+        agreements. Staff users may request deletion of their accounts through the app
+        where available or by contacting <PrivacyEmail />. Transactional records may be
+        retained when required for legitimate business or legal purposes.
       </P>
     ),
   },
   {
-    id: 'account-deletion',
-    title: 'Account Deletion',
+    id: 'security',
+    title: 'Security',
     content: (
       <P>
-        Users can request deletion of their account and associated personal
-        information through the account-deletion option available in the app.
-        Users may also contact <PrivacyEmail />.
+        We use reasonable administrative, technical, and organizational safeguards
+        designed to protect information. No online service can guarantee absolute
+        security, and staff members are responsible for protecting their credentials
+        and devices.
       </P>
     ),
   },
   {
-    id: 'childrens-privacy',
+    id: 'children',
     title: "Children's Privacy",
     content: (
       <P>
-        NYCMC Yard Sale is not directed to children under 13, and Ahrok LLC does
-        not knowingly collect personal information from children under 13.
+        NYCMC Yard Sale is not directed to children under 13, and Ahrok LLC does not
+        knowingly collect personal information from children under 13 through the app.
       </P>
     ),
   },
@@ -116,8 +139,8 @@ const sections: PrivacySection[] = [
     title: 'Changes to This Policy',
     content: (
       <P>
-        Changes to this policy will be posted on this page with an updated
-        effective date.
+        We may update this policy as the app, applicable law, or service providers
+        change. The revised policy will be posted on this page with an updated date.
       </P>
     ),
   },
@@ -125,24 +148,10 @@ const sections: PrivacySection[] = [
     id: 'contact',
     title: 'Contact',
     content: (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-        }}
-      >
-        <Text weight="semibold">Ahrok LLC</Text>
-        <Text>
-          <PrivacyEmail />
-        </Text>
-        <Link
-          href="/privacy/nycmc-yard-sale"
-          style={{ color: 'var(--fgColor-muted)', fontSize: 14 }}
-        >
-          https://ahrok.site/privacy/nycmc-yard-sale
-        </Link>
-      </div>
+      <P>
+        NYCMC Yard Sale is developed by Ahrok LLC. Contact <PrivacyEmail /> with privacy
+        questions or requests.
+      </P>
     ),
   },
 ]
@@ -153,24 +162,11 @@ export default function NycmcYardSalePrivacyPage() {
       <PrivacyHero
         eyebrow="Product Privacy Policy"
         title="NYCMC Yard Sale Privacy Policy"
-        intro="NYCMC Yard Sale is a mobile inventory-management app. This policy explains what information the app may collect and how it is used."
+        intro="This policy explains how NYCMC Yard Sale handles staff accounts, inventory records, storefront orders, payments, and pickup information."
+        lastUpdated="August 11, 2026"
       />
       <div style={{ paddingTop: 8 }}>
-        <PrivacyBody sections={sections}>
-          <div
-            style={{
-              marginTop: 48,
-              paddingTop: 24,
-              borderTop:
-                'var(--borderWidth-thin) solid var(--borderColor-default)',
-            }}
-          >
-            <P>
-              You may contact <PrivacyEmail /> with privacy questions or
-              requests.
-            </P>
-          </div>
-        </PrivacyBody>
+        <PrivacyBody sections={sections} />
       </div>
     </main>
   )
