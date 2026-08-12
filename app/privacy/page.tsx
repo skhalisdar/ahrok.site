@@ -13,14 +13,19 @@ export const metadata: Metadata = {
 
 const policies = [
   {
-    href: '/privacy/nycmc-yard-sale',
-    name: 'NYCMC Yard Sale Privacy Policy',
-    description: 'Inventory-management app for resale and small-item businesses.',
-  },
-  {
     href: '/privacy/fieldrelay',
     name: 'FieldRelay Privacy Policy',
-    description: 'Construction coordination platform, currently in development.',
+    description: 'Construction coordination and project-management platform.',
+  },
+  {
+    href: '/privacy/ineednotary',
+    name: 'iNeedNotary Privacy Policy',
+    description: 'Remote notarization and apostille service platform.',
+  },
+  {
+    href: '/privacy/nycmc-yard-sale',
+    name: 'NYCMC Yard Sale Privacy Policy',
+    description: 'Inventory, storefront, ordering, and event-pickup app.',
   },
 ]
 
@@ -30,7 +35,8 @@ export default function PrivacyCenterPage() {
       <PrivacyHero
         eyebrow="Privacy"
         title="Privacy Center"
-        intro="Ahrok LLC develops practical software products for real-world businesses. This Privacy Center explains how privacy information applies to Ahrok and its products."
+        intro="Ahrok LLC develops practical software products for real-world businesses. Each product has its own privacy policy because the information it handles and the services it provides are different."
+        lastUpdated="August 11, 2026"
       />
 
       <Container narrow>
@@ -127,10 +133,10 @@ export default function PrivacyCenterPage() {
                 How these policies apply
               </Heading>
               <P>
-                Each Ahrok product may collect and use different information
-                depending on its functionality. Product-specific privacy
-                policies control when they differ from this general Privacy
-                Center.
+                The product-specific policy for the Ahrok product you use controls
+                how personal information is handled for that product. If a product
+                links to a third-party service, that provider may also have its own
+                privacy policy.
               </P>
             </section>
 
@@ -148,14 +154,14 @@ export default function PrivacyCenterPage() {
                 Privacy contact
               </Heading>
               <P>
-                You may contact{' '}
+                Contact{' '}
                 <Link
                   href="mailto:privacy@ahrok.site"
                   style={{ color: 'var(--ahrok-accent)' }}
                 >
                   privacy@ahrok.site
                 </Link>{' '}
-                with privacy questions or requests.
+                with privacy questions, access requests, or deletion requests.
               </P>
             </section>
           </Stack>
