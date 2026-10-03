@@ -32,6 +32,16 @@ export interface Product {
 
 export const products: Product[] = [
   {
+    slug: "zeroanx",
+    name: "ZeroAnx",
+    category: "Everyday Memory Aid",
+    description: "A private, account-free memory aid for recording everyday confirmations, with optional photos and locations stored on your device.",
+    status: "Pre-Release",
+    ctaLabel: "Explore ZeroAnx",
+    ctaHref: "/zeroanx",
+    learnMoreHref: "/zeroanx/support",
+  },
+  {
     slug: 'fieldrelay',
     name: 'FieldRelay',
     category: 'Construction Operations',

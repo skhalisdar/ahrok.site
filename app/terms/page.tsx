@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 }
 
 const terms = [
+  { href: "/terms/zeroanx", name: "ZeroAnx Terms of Use", description: "Private memory aid for everyday confirmations." },
   {
     href: '/terms/fieldrelay',
     name: 'FieldRelay Terms of Use',

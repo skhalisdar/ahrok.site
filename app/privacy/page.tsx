@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 }
 
 const policies = [
+  { href: "/privacy/zeroanx", name: "ZeroAnx Privacy Policy", description: "Private memory aid for everyday confirmations." },
   {
     href: '/privacy/fieldrelay',
     name: 'FieldRelay Privacy Policy',
