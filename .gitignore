@@ -14,3 +14,13 @@ node_modules
 .next/
 .DS_Store
 .vercel
+*.sqlite*
+*.db
+.env
+*.p8
+*.p12
+*.pem
+*.key
+*.jks
+*.keystore
+
