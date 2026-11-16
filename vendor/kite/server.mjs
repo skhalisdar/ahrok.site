@@ -67,6 +67,7 @@ function dateValue(value) {
   return value;
 }
 async function body(req, limit = 8192) {
+  req.setEncoding('utf8');
   let data = '';
   for await (const chunk of req) {
     data += chunk;

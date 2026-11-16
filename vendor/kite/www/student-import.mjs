@@ -54,15 +54,19 @@ export async function importStudents(db, input) {
     if (db.dialect === 'postgres') await db.exec('LOCK TABLE students IN SHARE ROW EXCLUSIVE MODE');
     if (group !== null && !await db.prepare('SELECT id FROM student_groups WHERE id = ?').get(group)) bad('The selected student group is no longer available.');
     const seen = new Set((await db.prepare('SELECT name, grade FROM students').all()).map(studentKey));
-    let imported = 0, skipped = 0;
+    const additions = []; let skipped = 0;
     for (const row of students) {
       const key = studentKey(row);
       if (seen.has(key)) { skipped++; continue; }
-      const student = await db.prepare("INSERT INTO students (name, grade, track) VALUES (?, ?, '') RETURNING id").get(row.name, row.grade);
-      if (group !== null) await db.prepare('INSERT INTO student_group_memberships (student_id, group_id) VALUES (?, ?)').run(student.id, group);
-      seen.add(key); imported++;
+      additions.push(row); seen.add(key);
+    }
+    if (additions.length) {
+      const saved = await db.prepare('INSERT INTO students (name, grade, track) VALUES ' + additions.map(()=>"(?, ?, '')").join(',') + ' RETURNING id')
+        .all(...additions.flatMap(row=>[row.name,row.grade]));
+      if (group !== null) await db.prepare('INSERT INTO student_group_memberships (student_id, group_id) VALUES ' + saved.map(()=>'(?, ?)').join(','))
+        .run(...saved.flatMap(student=>[student.id,group]));
     }
     await db.exec('COMMIT');
-    return {imported, skipped};
+    return {imported:additions.length, skipped};
   } catch (error) { await db.exec('ROLLBACK'); throw error; }
 }
