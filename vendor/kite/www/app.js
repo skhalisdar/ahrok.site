@@ -1,7 +1,7 @@
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
 import {programPanel} from './program-panels.mjs';
-import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-import.mjs';
+import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-csv.mjs';
 
 const native = Boolean(window.Capacitor?.isNativePlatform());
 const $ = id => document.getElementById(id);

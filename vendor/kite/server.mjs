@@ -103,7 +103,7 @@ const capacitorRuntime = await readFile(resolve(process.cwd(), 'vendor/kite/www/
 const safeHeaders = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 const shell = await readFile(resolve(process.cwd(), 'vendor/kite/www/shell.mjs'));
 const logo = await readFile(resolve(process.cwd(), 'vendor/kite/www/kite.svg'));
-const studentImportClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/student-import.mjs'));
+const studentImportClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/student-csv.mjs'));
 const port = Number(env.PORT ?? 4173);
 const adminOrigin = env.KITE_ADMIN_ORIGIN ?? 'http://127.0.0.1:' + port;
 if(env.NODE_ENV==='production'&&(!env.KITE_ADMIN_ORIGIN||!/^https:\/\/[^/]+$/.test(adminOrigin)))throw new Error('Set KITE_ADMIN_ORIGIN to the exact HTTPS administrator origin');
@@ -542,7 +542,7 @@ const handler = async (req,res) => {
     if (req.method === 'GET' && asset === '/capacitor.js') return send(200,capacitorRuntime,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/config.js') return send(200,config,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/shell.mjs') return send(200,shell,'text/javascript; charset=utf-8');
-    if (req.method === 'GET' && asset === '/student-import.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
+    if (req.method === 'GET' && asset === '/student-csv.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/kite.svg') return send(200,logo,'image/svg+xml');
     const match = url.pathname.match(/^(\/kite\/api\/admin|\/api\/mobile)(\/.+)$/);
     if (!match) return send(404,{error:'Unknown page.'});

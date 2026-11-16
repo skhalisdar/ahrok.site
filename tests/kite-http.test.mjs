@@ -14,7 +14,7 @@ test('portal and browser assets load without a database and resolve under /kite'
     assert.equal(response.status, 200);
     assert.match(await response.text(), /<base href="\/kite\/">/);
   }
-  for (const file of ['app.js', 'shell.mjs', 'config.js', 'mobile-auth.mjs', 'program-panels.mjs', 'student-import.mjs', 'capacitor.js', 'kite.svg']) {
+  for (const file of ['app.js', 'shell.mjs', 'config.js', 'mobile-auth.mjs', 'program-panels.mjs', 'student-csv.mjs', 'capacitor.js', 'kite.svg']) {
     assert.equal((await handle(new Request(origin + '/kite/' + file))).status, 200, file);
   }
 });
