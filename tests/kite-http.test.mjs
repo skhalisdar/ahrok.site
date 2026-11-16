@@ -14,7 +14,7 @@ test('portal and browser assets load without a database and resolve under /kite'
     assert.equal(response.status, 200);
     assert.match(await response.text(), /<base href="\/kite\/">/);
   }
-  for (const file of ['app.js', 'shell.mjs', 'config.js', 'mobile-auth.mjs', 'program-panels.mjs', 'capacitor.js', 'kite.svg']) {
+  for (const file of ['app.js', 'shell.mjs', 'config.js', 'mobile-auth.mjs', 'program-panels.mjs', 'student-import.mjs', 'capacitor.js', 'kite.svg']) {
     assert.equal((await handle(new Request(origin + '/kite/' + file))).status, 200, file);
   }
 });
@@ -61,6 +61,12 @@ test('admin workflow survives application restart; role and origin restrictions 
   const day = session.today;
   let desk = await ok(await api('desk?day=' + day));
   const group = desk.groups[0].id;
+  const imports = {students:[{name:'CSV Student',grade:'7'},{name:'csv student',grade:'7'}],group};
+  assert.equal((await api('import-students', imports, {noCookie:true})).status,401);
+  assert.equal((await api('import-students', imports, {requestOrigin:'https://evil.example'})).status,403);
+  assert.equal((await api('import-students', {students:[{name:'Missing Grade'}]})).status,400);
+  assert.deepEqual(await ok(await api('import-students', imports)),{imported:1,skipped:1});
+  assert.deepEqual(await ok(await api('import-students', imports)),{imported:0,skipped:2});
   await ok(await api('students', { name: 'Sample Student', grade: '7', group }));
   await ok(await api('teacher-group', { teacher: 'teacher', group, assigned: true }));
   desk = await ok(await api('desk?day=' + day));

@@ -1,6 +1,7 @@
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
 import {programPanel} from './program-panels.mjs';
+import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-import.mjs';
 
 const native = Boolean(window.Capacitor?.isNativePlatform());
 const $ = id => document.getElementById(id);
@@ -10,6 +11,7 @@ const statuses = {attendance:['Unmarked','Present','Absent','Tardy'],
   homework:['Unmarked','Complete','Needs Help','No Homework']};
 let session, data, tab = 'roster', busy = false;
 let expiryTimer;
+let studentImport = null;
 function expireMobileSession() {
   if(native&&session?.expiresAt<=Date.now()) {
     loggedOut();message('Your mobile session expired. Sign in again.',true);return true;
@@ -35,6 +37,7 @@ today();
 $('login-title').textContent = native ? 'Staff login' : 'Administrator login';
 $('identity').textContent = native ? 'Staff workspace' : 'Administrator portal';
 function loggedOut() {
+  studentImport = null;
   window.clearTimeout(expiryTimer);
   session = data = null;
   activityId = null;
@@ -161,7 +164,7 @@ function adminPanel() {
       <button class="primary">Create Group</button></form>
       <p class="muted">Choose a group when adding a student, or assign it later from the roster below.</p>
       </div>` + data.groups.map(groupCard).join('') +
-    `<div class="entry"><h2>Students</h2><form data-form="students">
+    studentImportPanel() + `<div class="entry"><h2>Students</h2><form data-form="students">
       <label>Student name<input name="name" required maxlength="80"></label>
       <label>Grade<input type="text" name="grade" required maxlength="60"></label>
       <label>Student Group<select name="group">${groupOptions()}</select></label>
@@ -184,6 +187,23 @@ function adminPanel() {
         <input name="action" type="hidden" value="reset">
         <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
         <button>Reset Password</button></form>` : '</div>'}</div>`).join('');
+}
+function studentImportPanel() {
+  const preview = studentImport;
+  return `<div class="entry"><h2>Import students from CSV</h2>
+    <p>Include a Name column, or First Name and Last Name. Grade is optional if you enter a default grade below. Maximum 500 students, 100 KB. Export spreadsheets as CSV UTF-8.</p>
+    <p>Matching names and grades are skipped, including archived students. Existing records and group assignments are kept. Review students with identical names and grades separately.</p>
+    <form data-form="student-csv-preview">
+      <label>CSV file<input name="file" type="file" accept=".csv,text/csv" required></label>
+      <label>Default grade<input name="grade" maxlength="60" placeholder="Used when the CSV has no grade"></label>
+      <label>Group for imported students<select name="group">${groupOptions()}</select></label>
+      <button>Preview CSV</button>
+    </form>
+    ${preview ? `<h3>Preview: ${preview.rows.length} students</h3><p>${preview.added} new; ${preview.skipped} matching rows will be skipped. Group: ${escapeHTML(preview.groupName)}.</p>
+      <div style="overflow:auto;max-height:320px" tabindex="0" aria-label="Student import preview"><table><thead><tr><th>Name</th><th>Grade</th><th>Action</th></tr></thead><tbody>${preview.rows.map(row=>`<tr><td>${escapeHTML(row.name)}</td><td>${escapeHTML(row.grade)}</td><td>${row.skip?'Skip matching row':'Add'}</td></tr>`).join('')}</tbody></table></div>
+      <button class="primary" data-action="import-students" ${preview.added ? '' : 'disabled'}>Import ${preview.added} students</button>
+      <button data-action="cancel-student-import">Cancel preview</button>` : ''}
+  </div>`;
 }
 const participation = ['Unmarked','Participated','Did Not Participate'];
 function activityForm(activity) {
@@ -366,6 +386,20 @@ $('panel').addEventListener('submit',event => {
   if (!route) return;
   const form = new FormData(event.target);
   const payload = Object.fromEntries(form);
+  if (route === 'student-csv-preview') {
+    task(async () => {
+      studentImport = null;
+      const file = form.get('file');
+      if (!file || !file.size || file.size > MAX_CSV_BYTES) throw Error('Choose a nonempty CSV file smaller than 100 KB.');
+      const text = new TextDecoder('utf-8', {fatal:true}).decode(await file.arrayBuffer());
+      const students = parseStudentCSV(text, String(form.get('grade') ?? ''));
+      const seen = new Set(data.students.map(studentKey));
+      const rows = students.map(row => { const key = studentKey(row), skip = seen.has(key); seen.add(key); return {...row,skip}; });
+      const group = payload.group ? Number(payload.group) : null;
+      studentImport = {rows, group, groupName:data.groups.find(g=>g.id===group)?.name ?? 'No group', added:rows.filter(r=>!r.skip).length, skipped:rows.filter(r=>r.skip).length};
+      render(); message('CSV preview ready. Review the names before importing.');
+    }); return;
+  }
   if(route==='export') {
     task(async()=>{
       const path='export?'+new URLSearchParams(payload);
@@ -405,6 +439,16 @@ $('panel').addEventListener('click',event => {
   const button = event.target.closest('[data-action]');
   if (!button || busy) return;
   const {action,student,id,delta} = button.dataset;
+  if (action === 'cancel-student-import') { studentImport = null; render(); return; }
+  if (action === 'import-students' && studentImport && session?.role === 'admin') {
+    const preview = studentImport;
+    task(async () => {
+      const result = await api('import-students', {students:preview.rows.map(({name,grade})=>({name,grade})), group:preview.group});
+      studentImport = null;
+      await refresh();
+      message(`${result.imported} students imported; ${result.skipped} matching rows skipped.`);
+    }); return;
+  }
   if(action==='device-revoke'){if(confirm('Revoke this device and its active sessions?'))task(()=>change('revoke-device',{id},'Device revoked'));return;}
   if(action==='contact-disable'){if(confirm('Revoke this pickup authorization?'))task(()=>change('pickup-contact-disable',{id},'Pickup authorization revoked'));return;}
   const day = $('date').value;

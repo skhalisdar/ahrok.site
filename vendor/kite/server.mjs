@@ -9,6 +9,7 @@ import {resolve} from 'node:path';
 import {bindInstitution,csv} from './operations.mjs';
 import {createMobileProof,sha256} from './mobile-proof.mjs';
 import {randomUUID} from 'node:crypto';
+import {importStudents} from './www/student-import.mjs';
 
 export async function startServer({database, env=process.env, listen=true} = {}) {
 process.umask(0o077);
@@ -65,11 +66,11 @@ function dateValue(value) {
   if (!Number.isFinite(+parsed) || parsed.toISOString().slice(0,10) !== value) fail(400, 'Choose a valid date.');
   return value;
 }
-async function body(req) {
+async function body(req, limit = 8192) {
   let data = '';
   for await (const chunk of req) {
     data += chunk;
-    if (data.length > 8192) fail(413, 'Request too large.');
+    if (Buffer.byteLength(data) > limit) fail(413, 'Request too large.');
   }
   req.kiteRawBody=data;
   let value;
@@ -101,6 +102,7 @@ const capacitorRuntime = await readFile(resolve(process.cwd(), 'vendor/kite/www/
 const safeHeaders = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 const shell = await readFile(resolve(process.cwd(), 'vendor/kite/www/shell.mjs'));
 const logo = await readFile(resolve(process.cwd(), 'vendor/kite/www/kite.svg'));
+const studentImportClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/student-import.mjs'));
 const port = Number(env.PORT ?? 4173);
 const adminOrigin = env.KITE_ADMIN_ORIGIN ?? 'http://127.0.0.1:' + port;
 if(env.NODE_ENV==='production'&&(!env.KITE_ADMIN_ORIGIN||!/^https:\/\/[^/]+$/.test(adminOrigin)))throw new Error('Set KITE_ADMIN_ORIGIN to the exact HTTPS administrator origin');
@@ -255,7 +257,7 @@ async function api(req, url, audience, headers) {
     return {token:result.token, id, role, expiresAt:result.expiresAt, institutionId:configuredInstitution,today:programDay()};
   }
   // Read the body before checking the session so a slow upload cannot use a session revoked in the meantime.
-  const input = req.method === 'POST' ? await body(req) : {};
+  const input = req.method === 'POST' ? await body(req, route === 'POST /api/import-students' ? 262144 : 8192) : {};
   const verified = await auth.requireSession(audience, req);
   const user = {id:verified.accountId,role:verified.role,tokenHash:verified.tokenDigest};
   const admin = user.role === 'admin';
@@ -354,6 +356,7 @@ async function api(req, url, audience, headers) {
   }
   if (route === 'POST /api/activity-record') return (await saveActivityRecord(user, input));
   if (!admin) fail(403, 'Administrator access required.');
+  if (route === 'POST /api/import-students') return await importStudents(db, input);
   if(route==='POST /api/rename-group') {
     const name=typeof input.name==='string'?input.name.trim().replace(/\s+/g,' '):'';
     if(!Number.isSafeInteger(input.group)||!name||name.length>60)fail(400,'Enter a valid group name.');
@@ -538,6 +541,7 @@ const handler = async (req,res) => {
     if (req.method === 'GET' && asset === '/capacitor.js') return send(200,capacitorRuntime,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/config.js') return send(200,config,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/shell.mjs') return send(200,shell,'text/javascript; charset=utf-8');
+    if (req.method === 'GET' && asset === '/student-import.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/kite.svg') return send(200,logo,'image/svg+xml');
     const match = url.pathname.match(/^(\/kite\/api\/admin|\/api\/mobile)(\/.+)$/);
     if (!match) return send(404,{error:'Unknown page.'});
@@ -568,4 +572,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     setTimeout(() => process.exit(1),25000).unref();
   });
 }
+
 
