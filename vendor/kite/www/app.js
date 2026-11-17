@@ -106,7 +106,7 @@ function groupedStudentSections(students, section, renderStudents) {
     groups.get(id).students.push(student);
   }
   const searching = Boolean($('search').value.trim());
-  return [...groups.values()].filter(group => !searching || group.students.length).map(group =>
+  return [...groups.values()].filter(group => group.students.length || (!searching && ['roster','courses','pickup'].includes(section))).map(group =>
     `<details class="managed-group roster-group" data-manage-key="${section}-group-${group.id}" ${searching?'open':''}>
       <summary class="group-summary"><strong>${escapeHTML(group.name)}</strong><span class="badge">${group.students.length} students</span></summary>
       <div class="roster-group-content">${group.students.length ? renderStudents(group.students) : '<p class="empty">No students in this group.</p>'}</div>
@@ -287,7 +287,7 @@ function activityPanel(admin, query) {
     <p class="muted activity-title">Instructor ${escapeHTML(activity.teacher_id)}${activity.teacher_active ? '' : ' (disabled)'} ·
       ${activity.all_groups ? 'All groups, including future groups' : 'Selected groups'}</p>
     ${admin ? `<details class="activity-details"><summary>Edit activity settings</summary>${activityForm(activity)}</details>` : ''}
-  </div>` + (students.length ? students.map(s => `<div class="entry tools">
+  </div>` + (students.length ? groupedStudentSections(students, 'activity-'+activity.id, members=>members.map(s => `<div class="entry tools">
     <div class="name">${escapeHTML(s.name)}<small>${escapeHTML(s.group_name)}</small></div>
     <label>Participation<select data-activity-student="${s.id}" aria-label="Participation for ${escapeHTML(s.name)}">
       ${options(participation,s.status ?? 'Unmarked')}</select></label>
@@ -296,7 +296,7 @@ function activityPanel(admin, query) {
       aria-label="Remove a step for ${escapeHTML(s.name)}">−1 Step</button>
     <button data-action="activity-step" data-student="${s.id}" data-delta="1" ${s.level === 5 ? 'disabled' : ''}
       aria-label="Add a step for ${escapeHTML(s.name)}">+1 Step</button>
-  </div>`).join('') : '<p class="empty">No enrolled students match this activity view.</p>');
+  </div>`).join('')) : '<p class="empty">No enrolled students match this activity view.</p>');
 }
 
 function render() {
@@ -315,13 +315,13 @@ function render() {
       active.filter(s => s.homework === 'Needs Help').length + ' need help') +
     (admin ? metric('Staff signed in',[...recent.values()].filter(Boolean).length,'For the selected date') :
       metric('My shift',ownShift ? 'Signed In' : 'Signed Out','For the selected date'));
-  $('search-wrap').hidden = !['roster','courses','activities'].includes(tab);
+  $('search-wrap').hidden = !['roster','courses','activities','pickup','incidents'].includes(tab);
   const query = $('search').value.trim().toLowerCase();
   const students = (tab === 'courses' ? active : data.students).filter(s =>
     (s.name + ' grade ' + s.grade + ' ' + (s.group_name ?? '')).toLowerCase().includes(query));
   for (const item of $('tabs').querySelectorAll('button')) item.dataset.tab === tab ? item.setAttribute('aria-current','page') : item.removeAttribute('aria-current');
   const openEditors = [...$('panel').querySelectorAll('details[data-manage-key][open]')].map(element => element.dataset.manageKey);
-  $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
+  $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
@@ -532,5 +532,6 @@ async function restoreAdminSession() {
   });
 }
 if (!native) await restoreAdminSession();
+
 
 
