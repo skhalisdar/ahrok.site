@@ -199,6 +199,18 @@ function groupOptions(selected) {
   return '<option value="">No group</option>' + data.groups.map(group =>
     `<option value="${group.id}" ${selected === group.id ? 'selected' : ''}>${escapeHTML(group.name)}</option>`).join('');
 }
+function teacherGroupEditor(teacher) {
+  const assigned=new Set(data.assignments.filter(a=>a.teacher_id===teacher.id).map(a=>a.group_id));
+  const names=data.groups.filter(g=>assigned.has(g.id)).map(g=>g.name);
+  return `<details data-manage-key="teacher-groups-${escapeHTML(teacher.id)}"><summary>Assigned groups: ${names.length?names.map(escapeHTML).join(', '):'None'}</summary>
+    ${teacher.active&&data.groups.length?`<form data-form="teacher-groups" style="display:block">
+      <input type="hidden" name="teacher" value="${escapeHTML(teacher.id)}">
+      <fieldset><legend>Groups for ${escapeHTML(teacher.id)}</legend>
+      ${data.groups.map(group=>`<label class="group-choice"><input type="checkbox" name="groups" value="${group.id}" ${assigned.has(group.id)?'checked':''}>${escapeHTML(group.name)}</label>`).join('')}
+      </fieldset><p class="muted">Select any number of groups. Uncheck a group to remove the assignment.</p>
+      <button class="primary">Save teacher groups</button></form>`:`<p class="muted">${teacher.active?'Create a student group first.':'Enable this account before changing its groups.'}</p>`}
+    </details>`;
+}
 function adminPanel() {
   return heading('Manage program','Manage student enrollment, groups and teacher access.') +
     `<div class="entry"><h2>Registered mobile devices</h2>${(data.devices??[]).map(device=>`<p>${escapeHTML(device.platform)} · ${escapeHTML(device.id.slice(0,12))} · ${device.active?'Active':'Revoked'} ${device.active?`<button data-action="device-revoke" data-id="${escapeHTML(device.id)}">Revoke device and sessions</button>`:''}</p>`).join('')||'<p>No mobile devices enrolled.</p>'}</div>`+
@@ -214,17 +226,18 @@ function adminPanel() {
       <label>Grade<input type="text" name="grade" required maxlength="60"></label>
       <label>Student Group<select name="group">${groupOptions()}</select></label>
       <button class="primary">Add Student</button></form></div>` +
-    `<div class="entry"><h2>Teacher accounts</h2><form data-form="teachers">
+    `<div class="entry"><h2>Teacher accounts and groups</h2><p>Assign each teacher to one or more groups. Teachers can view and work with students in their assigned groups.</p><form data-form="teachers">
       <label>User ID<input name="id" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false"></label>
       <label>Password<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
       <button class="primary">Create Teacher</button></form></div>` +
     data.teachers.map(t => `<div class="entry controls"><div class="tools"><strong>${escapeHTML(t.id)}</strong>
       <span class="badge">${t.active ? 'Active' : 'Disabled'}</span>
-      ${t.active ? `<button data-action="disable" data-id="${escapeHTML(t.id)}">Disable Account</button></div>
-        <form data-form="teacher-access"><input name="id" type="hidden" value="${escapeHTML(t.id)}">
+      ${t.active ? `<button data-action="disable" data-id="${escapeHTML(t.id)}">Disable Account</button>` : ''}</div>
+      ${teacherGroupEditor(t)}
+      ${t.active ? `<form data-form="teacher-access"><input name="id" type="hidden" value="${escapeHTML(t.id)}">
         <input name="action" type="hidden" value="reset">
         <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
-        <button>Reset Password</button></form>` : '</div>'}</div>`).join('');
+        <button>Reset Password</button></form>` : ''}</div>`).join('');
 }
 function studentImportPanel() {
   const preview = studentImport;
@@ -489,12 +502,13 @@ $('panel').addEventListener('submit',event => {
   if (route === 'students' || route === 'student-group') {
     payload.group = payload.group ? Number(payload.group) : null;
   }
+  if(route==='teacher-groups')payload.groups=form.getAll('groups').map(Number);
   if (route === 'teacher-group') {
     payload.group = Number(payload.group);
     payload.assigned = payload.assigned === 'true';
   }
   task(async () => {
-    await change(route,payload,{'rename-group':'Group renamed','student-details':'Student saved',incident:'Incident recorded','resolve-incident':'Incident resolved',pickup:'Pickup recorded','pickup-contact':'Pickup contact authorized','void-pickup':'Pickup corrected',activities:payload.id ? 'Activity updated' : 'Activity created','teacher-group':payload.assigned ? 'Teacher assigned' : 'Teacher removed from group',groups:'Group created','student-group':'Student group saved',students:'Student added',teachers:'Teacher created','teacher-access':'Password reset and sessions revoked'}[route]);
+    await change(route,payload,{'teacher-groups':'Teacher groups saved','rename-group':'Group renamed','student-details':'Student saved',incident:'Incident recorded','resolve-incident':'Incident resolved',pickup:'Pickup recorded','pickup-contact':'Pickup contact authorized','void-pickup':'Pickup corrected',activities:payload.id ? 'Activity updated' : 'Activity created','teacher-group':payload.assigned ? 'Teacher assigned' : 'Teacher removed from group',groups:'Group created','student-group':'Student group saved',students:'Student added',teachers:'Teacher created','teacher-access':'Password reset and sessions revoked'}[route]);
   });
 });
 $('panel').addEventListener('click',event => {

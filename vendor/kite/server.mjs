@@ -152,6 +152,11 @@ const authMessages = {
   APP_PROOF_REQUIRED:'Mobile app verification is not available on this server.'
 };
 
+async function requireStudentAccess(user,student) {
+  if(!Number.isSafeInteger(student)||!await sql('SELECT id FROM students WHERE id=? AND active=1').get(student))fail(404,'Student is unavailable.');
+  if(user.role!=='admin'&&!await sql(`SELECT 1 FROM student_group_memberships m JOIN teacher_group_assignments a ON a.group_id=m.group_id WHERE m.student_id=? AND a.teacher_id=?`).get(student,user.id))fail(403,'This student is outside your assigned groups.');
+}
+
 async function activityList(user, day) {
   const admin = user.role === 'admin';
   const activities = (await sql(`SELECT a.id, a.name, a.teacher_id, a.all_groups, u.active AS teacher_active
@@ -166,10 +171,10 @@ async function activityList(user, day) {
     JOIN student_groups g ON g.id = m.group_id
     LEFT JOIN activity_participation p ON p.activity_id = a.id AND p.student_id = s.id AND p.day = ?
     LEFT JOIN activity_progress level ON level.activity_id = a.id AND level.student_id = s.id
-    WHERE a.id = ? ORDER BY g.name_key, s.name, s.id`);
+    WHERE a.id = ? AND (? OR EXISTS (SELECT 1 FROM teacher_group_assignments ta WHERE ta.group_id=m.group_id AND ta.teacher_id=?)) ORDER BY g.name_key, s.name, s.id`);
   const groups = sql('SELECT group_id FROM activity_groups WHERE activity_id = ? ORDER BY group_id');
   const result = [];
-  for (const a of activities) result.push({...a, groups: (await groups.all(a.id)).map(g => g.group_id), students: (await roster.all(day, a.id))});
+  for (const a of activities) result.push({...a, groups: (await groups.all(a.id)).map(g => g.group_id), students: (await roster.all(day, a.id, Number(admin), user.id))});
   return result;
 }
 
@@ -213,6 +218,7 @@ async function saveActivity(input) {
 async function saveActivityRecord(user, input) {
   const {activity, student, field, value} = input;
   if (!Number.isSafeInteger(activity) || !Number.isSafeInteger(student)) fail(400, 'Invalid activity or student.');
+  await requireStudentAccess(user,student);
   const allowed = (await sql(`SELECT 1 FROM activities a JOIN student_group_memberships m ON m.student_id = ?
     JOIN students s ON s.id = m.student_id AND s.active = 1
     WHERE a.id = ? AND (? OR a.teacher_id = ?) AND (a.all_groups = 1 OR EXISTS (
@@ -281,7 +287,7 @@ async function api(req, url, audience, headers) {
       FROM students s LEFT JOIN records r ON r.student = s.id AND r.day = ?
       LEFT JOIN student_group_memberships m ON m.student_id = s.id
       LEFT JOIN student_groups g ON g.id = m.group_id
-      WHERE s.active = 1 OR (? AND r.student IS NOT NULL) ORDER BY s.name, s.id`).all(day, Number(admin)));
+      WHERE (s.active = 1 OR (? AND r.student IS NOT NULL)) AND (? OR EXISTS (SELECT 1 FROM teacher_group_assignments ta WHERE ta.group_id=m.group_id AND ta.teacher_id=?)) ORDER BY s.name, s.id`).all(day, Number(admin), Number(admin), user.id));
     const staff = (await sql(`SELECT l.id, l.teacher, l.signed_in, l.at FROM staff_log l
       WHERE l.day = ? AND (? OR l.teacher = ?) ORDER BY l.id DESC`).all(day, Number(admin), user.id));
     const teachers = admin ? (await sql("SELECT id, active FROM users WHERE role = 'teacher' ORDER BY id").all()) : [];
@@ -290,15 +296,15 @@ async function api(req, url, audience, headers) {
         WHERE a.teacher_id = ? ORDER BY g.name_key`).all(user.id));
     const assignments = admin ? (await sql('SELECT group_id, teacher_id FROM teacher_group_assignments ORDER BY teacher_id').all()) : [];
     const incidents=await sql(`SELECT i.*,s.name AS student_name FROM incidents i JOIN students s ON s.id=i.student
-      WHERE i.day=? AND (? OR (i.recorded_by=? AND s.active=1)) ORDER BY i.at DESC`).all(day,Number(admin),user.id);
-    const pickupContacts=await sql('SELECT c.* FROM pickup_contacts c JOIN students s ON s.id=c.student WHERE c.active=1 AND (? OR s.active=1) ORDER BY c.name').all(Number(admin));
-    const pickups=await sql('SELECT p.*,s.name AS student_name FROM pickup_events p JOIN students s ON s.id=p.student WHERE p.day=? AND (? OR s.active=1) ORDER BY p.at DESC').all(day,Number(admin));
+      WHERE i.day=? AND (? OR (i.recorded_by=? AND s.active=1 AND EXISTS (SELECT 1 FROM student_group_memberships m JOIN teacher_group_assignments ta ON ta.group_id=m.group_id WHERE m.student_id=s.id AND ta.teacher_id=?))) ORDER BY i.at DESC`).all(day,Number(admin),user.id,user.id);
+    const pickupContacts=await sql('SELECT c.* FROM pickup_contacts c JOIN students s ON s.id=c.student WHERE c.active=1 AND (? OR (s.active=1 AND EXISTS (SELECT 1 FROM student_group_memberships m JOIN teacher_group_assignments ta ON ta.group_id=m.group_id WHERE m.student_id=s.id AND ta.teacher_id=?))) ORDER BY c.name').all(Number(admin),user.id);
+    const pickups=await sql('SELECT p.*,s.name AS student_name FROM pickup_events p JOIN students s ON s.id=p.student WHERE p.day=? AND (? OR (s.active=1 AND EXISTS (SELECT 1 FROM student_group_memberships m JOIN teacher_group_assignments ta ON ta.group_id=m.group_id WHERE m.student_id=s.id AND ta.teacher_id=?))) ORDER BY p.at DESC').all(day,Number(admin),user.id);
     const devices=admin?await sql('SELECT id,platform,active,created_at FROM mobile_devices WHERE institution_id=? ORDER BY created_at DESC').all(configuredInstitution):[];
     return {students, staff, teachers, groups, assignments, incidents,pickupContacts,pickups,devices,activities: (await activityList(user, day)), workspace: workspace && {name: workspace.name, accessType: workspace.access_type, expiresAt: workspace.expires_at}, today: programDay()};
   }
   if(route==='POST /api/incident') {
     const student=Number(input.student),day=dateValue(input.day);
-    if(!Number.isSafeInteger(student)||!await sql('SELECT id FROM students WHERE id=? AND active=1').get(student))fail(404,'Student is unavailable.');
+    await requireStudentAccess(user,student);
     if(!['Injury','Behavior','Safety','Other'].includes(input.category))fail(400,'Choose an incident category.');
     for(const field of ['detail','actionTaken'])if(typeof input[field]!=='string'||!input[field].trim()||input[field].length>2000)fail(400,'Enter incident details and the action taken, up to 2000 characters each.');
     if(!admin&&day!==programDay())fail(400,'Teachers record incidents for today.');
@@ -308,6 +314,7 @@ async function api(req, url, audience, headers) {
   if(route==='POST /api/pickup') {
     if(input.day!==programDay())fail(400,'Pickup can only be recorded for today.');
     if(!Number.isSafeInteger(input.student)||typeof input.contact!=='string'||typeof input.note!=='string'||input.note.length>500||input.identityChecked!==true)fail(400,'Confirm pickup identity and choose an authorized contact.');
+    await requireStudentAccess(user,input.student);
     const contact=await sql('SELECT c.* FROM pickup_contacts c JOIN students s ON s.id=c.student WHERE c.id=? AND c.student=? AND c.active=1 AND s.active=1').get(input.contact,input.student);
     if(!contact)fail(403,'This person is not an active authorized pickup contact.');
     if(await sql('SELECT id FROM pickup_events WHERE student=? AND day=? AND voided_at IS NULL').get(input.student,input.day))fail(409,'Pickup has already been recorded.');
@@ -343,7 +350,7 @@ async function api(req, url, audience, headers) {
   if (route === 'POST /api/record') {
     const {student, field, value} = input;
     const day = dateValue(input.day);
-    if (!Number.isSafeInteger(student) || !(await sql('SELECT 1 FROM students WHERE id = ? AND active = 1').get(student))) fail(404, 'Student is unavailable.');
+    await requireStudentAccess(user,student);
     if (field === 'note' ? typeof value !== 'string' || value.length > 140 :
         !Object.hasOwn(statuses, field) || !statuses[field].includes(value)) fail(400, 'Invalid student record.');
     (await sql(`INSERT INTO records (day, student, ${field}) VALUES (?, ?, ?)
@@ -352,6 +359,7 @@ async function api(req, url, audience, headers) {
   }
   if (route === 'POST /api/step') {
     if (!Number.isSafeInteger(input.student) || ![-1,1].includes(input.delta)) fail(400, 'Invalid progress update.');
+    await requireStudentAccess(user,input.student);
     const row = (await sql('UPDATE students SET level = max(0, min(5, level + ?)) WHERE id = ? AND active = 1 RETURNING level')
       .get(input.delta, input.student));
     if (!row) fail(404, 'Student is unavailable.');
@@ -420,6 +428,20 @@ async function api(req, url, audience, headers) {
     const result = (await sql('INSERT INTO student_groups (name, name_key) VALUES (?, ?) ON CONFLICT(name_key) DO NOTHING')
       .run(name, key));
     if (!result.changes) fail(409, 'A group with this name already exists.');
+    return {};
+  }
+  if (route === 'POST /api/teacher-groups') {
+    const teacher=userId(input.teacher);
+    if(!Array.isArray(input.groups)||input.groups.length>500||input.groups.some(id=>!Number.isSafeInteger(id)||id<=0))fail(400,'Choose valid student groups.');
+    const groups=[...new Set(input.groups)];
+    await db.exec('BEGIN IMMEDIATE');
+    try {
+      if(!await sql("SELECT id FROM users WHERE id=? AND role='teacher' AND active=1").get(teacher))fail(404,'Active teacher account unavailable.');
+      for(const group of groups)if(!await sql('SELECT id FROM student_groups WHERE id=?').get(group))fail(404,'A selected group is unavailable. Refresh and try again.');
+      await sql('DELETE FROM teacher_group_assignments WHERE teacher_id=?').run(teacher);
+      for(const group of groups)await sql('INSERT INTO teacher_group_assignments (group_id,teacher_id) VALUES (?,?)').run(group,teacher);
+      await db.exec('COMMIT');
+    }catch(error){await db.exec('ROLLBACK');throw error;}
     return {};
   }
   if (route === 'POST /api/teacher-group') {
@@ -556,8 +578,8 @@ const handler = async (req,res) => {
     if (req.method === 'GET' && asset === '/config.js') return send(200,config,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/schedule-view.mjs') return send(200,scheduleClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/shell.mjs') return send(200,shell,'text/javascript; charset=utf-8');
-    if (req.method === 'GET' && asset === '/student-csv.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/kite.svg') return send(200,logo,'image/svg+xml');
+    if (req.method === 'GET' && asset === '/student-csv.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
     const match = url.pathname.match(/^(\/kite\/api\/admin|\/api\/mobile)(\/.+)$/);
     if (!match) return send(404,{error:'Unknown page.'});
     const audience = match[1] === '/kite/api/admin' ? 'admin-web' : 'mobile';
@@ -588,5 +610,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     setTimeout(() => process.exit(1),25000).unref();
   });
 }
-
 
