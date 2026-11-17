@@ -437,16 +437,26 @@ $('panel').addEventListener('submit',event => {
     }); return;
   }
   if(route==='export') {
+    payload.format = event.submitter?.value === 'pdf' ? 'pdf' : 'csv';
     task(async()=>{
       const path='export?'+new URLSearchParams(payload);
       const origin=native?mobileOrigin(window.DESK_API_ORIGIN):'';
       const headers=native?await mobileHeaders({origin,path,session}):{};
       const response=await fetch((native?origin+'/api/mobile/':'/kite/api/admin/')+path,{headers,credentials:native?'omit':'same-origin'});
       if(!response.ok)throw new Error((await response.json()).error??'Export failed.');
-      const filename=`kite-${payload.type}-${payload.from}-${payload.to}.csv`;
-      if(native){const result=await window.Capacitor.registerPlugin('KiteDevice').saveCsv({filename,content:await response.text()});message(result.saved?'CSV saved':'CSV save cancelled');return;}
+      const filename=`kite-${payload.type}-${payload.from}-${payload.to}.${payload.format}`;
+      if(native){
+        const plugin=window.Capacitor.registerPlugin('KiteDevice');
+        let result;
+        if(payload.format==='pdf'){
+          const bytes=new Uint8Array(await response.arrayBuffer());let binary='';
+          for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
+          result=await plugin.savePdf({filename,base64:btoa(binary)});
+        }else result=await plugin.saveCsv({filename,content:await response.text()});
+        message(result.saved?'Report saved':'Report save cancelled');return;
+      }
       const blob=await response.blob(),link=document.createElement('a'),url=URL.createObjectURL(blob);
-      link.href=url;link.download=`kite-${payload.type}-${payload.from}-${payload.to}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);message('CSV downloaded');
+      link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);message(payload.format.toUpperCase()+' downloaded');
     });return;
   }
   if(['incident','pickup','pickup-contact'].includes(route))payload.student=Number(payload.student);

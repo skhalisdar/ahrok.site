@@ -9,6 +9,7 @@ import {resolve} from 'node:path';
 import {bindInstitution,csv} from './operations.mjs';
 import {createMobileProof,sha256} from './mobile-proof.mjs';
 import {randomUUID} from 'node:crypto';
+import {reportPDF} from './pdf-report.mjs';
 import {importStudents} from './www/student-import.mjs';
 
 export async function startServer({database, env=process.env, listen=true} = {}) {
@@ -314,6 +315,8 @@ async function api(req, url, audience, headers) {
     const from=dateValue(url.searchParams.get('from')),to=dateValue(url.searchParams.get('to'));
     if(from>to||(+new Date(to)- +new Date(from))/86400000>366)fail(400,'Choose a date range of at most 367 days.');
     const type=url.searchParams.get('type');
+    const format=url.searchParams.get('format')??'csv';
+    if(!['csv','pdf'].includes(format))fail(400,'Choose CSV or PDF.');
     const sources={
       attendance:['SELECT r.day,s.id,s.name,s.grade,r.attendance FROM records r JOIN students s ON s.id=r.student WHERE r.day BETWEEN ? AND ? ORDER BY r.day,s.id',['day','id','name','grade','attendance']],
       homework:['SELECT r.day,s.id,s.name,r.homework,r.note FROM records r JOIN students s ON s.id=r.student WHERE r.day BETWEEN ? AND ? ORDER BY r.day,s.id',['day','id','name','homework','note']],
@@ -325,6 +328,11 @@ async function api(req, url, audience, headers) {
     if(!Object.hasOwn(sources,type))fail(400,'Choose an export type.');
     const [statement,columns]=sources[type],rows=await sql(statement).all(from,to);
     if(rows.length>50000)fail(413,'Export too large; choose a smaller date range.');
+    if(format==='pdf'){
+      if(rows.length>2000)fail(413,'PDF exports support up to 2,000 records; choose a smaller date range or download CSV.');
+      headers['Content-Disposition']=`attachment; filename="kite-${type}-${from}-${to}.pdf"`;
+      return {pdf:await reportPDF({type,from,to,columns,rows,fontPath:resolve(process.cwd(),'vendor/kite/fonts/DejaVuSans.ttf')}),type:'application/pdf'};
+    }
     headers['Content-Disposition']=`attachment; filename="kite-${type}-${from}-${to}.csv"`;
     return {csv:csv(columns,rows),type:'text/csv; charset=utf-8'};
   }
@@ -549,6 +557,7 @@ const handler = async (req,res) => {
     const audience = match[1] === '/kite/api/admin' ? 'admin-web' : 'mobile';
     url.pathname = '/api' + match[2];
     const result=await exclusive(() => api(req,url,audience,responseHeaders));
+    if(result?.type==='application/pdf')return send(200,result.pdf,result.type);
     if(result?.type==='text/csv; charset=utf-8')return send(200,result.csv,result.type);
     send(200,result);
   } catch (error) {

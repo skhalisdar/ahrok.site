@@ -8,7 +8,7 @@ const icons = {
   settings:'<circle cx="12" cy="12" r="4"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M5 5l3 3m8 8 3 3M5 19l3-3m8-8 3-3"/>'
 };
 const menus = [['roster','Attendance & HW','attendance'],['courses','Course Progression','roster'],
-  ['activities','Activities','activities'],['staff','Staff Log','home'],['incidents','Incidents','messages'],['pickup','Pickup','roster'],['reports','CSV Export','reports'],['admin','Manage Program','settings']];
+  ['activities','Activities','activities'],['staff','Staff Log','home'],['incidents','Incidents','messages'],['pickup','Pickup','roster'],['reports','Reports / Export','reports'],['admin','Manage Program','settings']];
 export function mountShell(root, { mode, active, onNavigate }) {
   const items = menus.filter(([id]) => !['admin','reports'].includes(id) || mode !== 'teacher');
   root.dataset.mode = mode;
@@ -23,4 +23,3 @@ export function mountShell(root, { mode, active, onNavigate }) {
     onNavigate(button.dataset.tab);
   };
 }
-
