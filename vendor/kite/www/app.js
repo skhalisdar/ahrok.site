@@ -189,14 +189,14 @@ function adminPanel() {
       <button class="primary">Add Student</button></form></div>` +
     `<div class="entry"><h2>Teacher accounts</h2><form data-form="teachers">
       <label>User ID<input name="id" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false"></label>
-      <label>Password<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
+      <label>Password<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
       <button class="primary">Create Teacher</button></form></div>` +
     data.teachers.map(t => `<div class="entry controls"><div class="tools"><strong>${escapeHTML(t.id)}</strong>
       <span class="badge">${t.active ? 'Active' : 'Disabled'}</span>
       ${t.active ? `<button data-action="disable" data-id="${escapeHTML(t.id)}">Disable Account</button></div>
         <form data-form="teacher-access"><input name="id" type="hidden" value="${escapeHTML(t.id)}">
         <input name="action" type="hidden" value="reset">
-        <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
+        <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
         <button>Reset Password</button></form>` : '</div>'}</div>`).join('');
 }
 function studentImportPanel() {

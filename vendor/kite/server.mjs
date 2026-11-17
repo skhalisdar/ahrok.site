@@ -42,9 +42,9 @@ function userId(value) {
   if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(id)) fail(400, 'Use 3–32 letters, digits, dots, underscores or hyphens for the user ID.');
   return id;
 }
-function newPassword(value) {
-  if (typeof value !== 'string' || value.length < 12 || value.length > 128) {
-    fail(400, 'Use a password between 12 and 128 characters.');
+function newPassword(value, minimum = 12) {
+  if (typeof value !== 'string' || value.length < minimum || value.length > 128) {
+    fail(400, `Use a password between ${minimum} and 128 characters.`);
   }
   return value;
 }
@@ -481,14 +481,14 @@ async function api(req, url, audience, headers) {
     const id = userId(input.id);
     if ((await sql('SELECT 1 FROM users WHERE id = ?').get(id))) fail(409, 'This user ID is already reserved.');
     (await sql("INSERT INTO users (id, role, password) VALUES (?, 'teacher', ?)")
-      .run(id, passwordHash(newPassword(input.password))));
+      .run(id, passwordHash(newPassword(input.password, 6))));
     return {};
   }
   if (route === 'POST /api/teacher-access') {
     const id = userId(input.id);
     if (!(await sql("SELECT 1 FROM users WHERE role = 'teacher' AND id = ? AND active = 1").get(id))) fail(404, 'Active teacher account unavailable.');
     if (!['disable','reset'].includes(input.action)) fail(400, 'Invalid account action.');
-    const password = input.action === 'reset' ? passwordHash(newPassword(input.password)) : null;
+    const password = input.action === 'reset' ? passwordHash(newPassword(input.password, 6)) : null;
     (await db.exec('BEGIN IMMEDIATE'));
     try {
       if (password) (await sql('UPDATE users SET password = ? WHERE id = ?').run(password, id));
