@@ -65,6 +65,102 @@ fieldset{border:1px solid #cbd5e1;border-radius:10px;margin:0;padding:6px 10px}
 .student-controls [data-action=archive]{justify-self:start;color:#9c2642}
 .group-settings{margin-top:16px;border-top:1px solid #dbe3ee;padding-top:12px}.group-settings>summary{cursor:pointer;padding:8px 0}.group-settings .controls{padding-top:12px}
 @media(max-width:600px){.managed-group{margin:10px 12px}.group-content{padding:10px}.group-summary{font-size:16px}.student-controls{padding-inline:4px}.student-controls label{width:100%}.student-controls input,.student-controls select{width:100%}}
+/* Dashboard presentation only: existing forms and delegated action hooks stay intact. */
+main{max-width:1280px;padding:28px 24px 48px}
+.toolbar{gap:16px;align-items:end}
+.tabs{flex-basis:100%;width:100%;flex-wrap:nowrap;overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px;gap:2px;scrollbar-width:thin}
+.tabs button{flex:0 0 auto;white-space:nowrap;font-size:13px;min-height:42px;padding:9px 11px;border-radius:8px;color:#475569;gap:6px}
+.tabs button:hover:not(:disabled){background:#f1f5f9;border-color:transparent;color:#0f172a}
+.tabs [aria-current=page]{background:#e0f2fe;color:#075985;box-shadow:none}
+.tabs svg{width:16px;height:16px;flex-shrink:0}
+#panel:has(.manage-dashboard){background:transparent;border:0;box-shadow:none;overflow:visible}
+.manage-dashboard{--manage-border:#e2e8f0;--manage-muted:#64748b}
+.manage-dashboard>.heading{padding:4px 0 22px;border:0;align-items:start}
+.manage-dashboard>.heading h2{font-size:26px;letter-spacing:-.035em}
+.manage-dashboard>.heading p{margin-top:4px;color:var(--manage-muted);font-size:14px}
+.manage-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:24px}
+.manage-section{overflow:hidden;border-radius:16px;box-shadow:0 2px 6px #0f172a04}
+.manage-section-header{display:flex;justify-content:space-between;align-items:start;gap:16px;padding:24px 22px 20px;border-bottom:1px solid var(--manage-border)}
+.manage-section-header .eyebrow{color:#075985;font-size:10px;letter-spacing:.12em;margin-bottom:5px}
+.manage-section-header h2{font-size:20px;letter-spacing:-.025em;line-height:1.35}
+.manage-section-header p{font-size:13px;margin-top:6px;max-width:320px}
+.manage-total{display:inline-flex;align-items:center;white-space:nowrap;border-radius:99px;padding:4px 9px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:650}
+.manage-dashboard h3{font-size:15px;font-weight:700;line-height:1.4;margin:0 0 12px}
+.manage-dashboard button,.manage-tool-trigger,.teacher-manage-label{font-size:13px;min-height:40px;border-radius:8px}
+.manage-dashboard button.primary{background:#075985;border-color:#075985;color:#fff}
+.manage-dashboard button.primary:hover{background:#064e70;border-color:#064e70}
+.manage-dashboard form{gap:12px;margin-top:12px}
+.manage-dashboard label{font-size:12px;font-weight:600;color:#475569;min-width:0}
+.manage-dashboard label input,.manage-dashboard label select{font-size:14px;font-weight:400;color:#17213a;min-width:0;max-width:100%;min-height:42px;width:100%}
+.manage-dashboard form>label{flex:1 1 150px}
+.manage-dashboard form>button{flex:0 0 auto}
+.manage-dashboard .muted{color:var(--manage-muted);font-size:13px}
+.manage-enrollment-tools{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--manage-border);background:#fcfdff}
+.manage-tool{min-width:0}
+.manage-tool-trigger{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #cbd5e1;background:white;padding:8px 12px;font-weight:650;color:#334155;cursor:pointer;list-style:none;user-select:none}
+.manage-tool-trigger::-webkit-details-marker,.teacher-overview::-webkit-details-marker{display:none}
+.manage-tool-trigger:hover{background:#f8fafc;border-color:#94a3b8}
+.manage-tool[open]>.manage-tool-trigger{background:#eaf5fc;border-color:#9ac6df;color:#075985}
+.manage-enrollment-tools>.manage-tool[open]{grid-column:1/-1}
+.manage-create-group{grid-column:1/-1}
+.manage-enrollment-tools .manage-tool:first-child>.manage-tool-trigger{background:#075985;border-color:#075985;color:#fff}
+.manage-dashboard .manage-tool>.entry{border:1px solid var(--manage-border);border-radius:10px;background:#fff;padding:18px;margin-top:10px}
+.manage-tool .entry h2{font-size:16px;margin-bottom:10px}
+.manage-tool .entry p{font-size:12px;color:var(--manage-muted);line-height:1.6}
+.manage-tool .entry p+p{margin-top:8px}
+.manage-tool .entry>button{margin-top:12px}
+.manage-group-list{padding:4px 0 10px}
+.manage-dashboard .managed-group{margin:14px 20px;border-color:var(--manage-border);border-radius:10px;background:#fff}
+.manage-dashboard .group-summary{background:#f8fafc;padding:15px 16px;font-size:15px;line-height:1.55}
+.manage-dashboard .group-summary:hover{background:#f0f6fa}
+.manage-dashboard .group-summary .badge{background:#eef2f6;color:#475569;border:0;font-size:11px;font-weight:600;margin-left:8px;padding:3px 8px}
+.manage-dashboard .managed-group[open]>.group-summary{border-bottom:1px solid var(--manage-border)}
+.manage-dashboard .group-content{padding:16px}
+.manage-dashboard .student-summary{padding:13px 4px;font-size:13px}
+.manage-dashboard .student-summary span{font-size:12px}
+.manage-dashboard .student-controls{padding:8px 4px 18px}
+.manage-dashboard .group-settings>summary{font-size:13px;color:#475569;font-weight:650}
+.manage-create-teacher{margin:18px 20px}
+.teacher-list-heading,.teacher-overview{display:grid;grid-template-columns:minmax(78px,.85fr) 68px minmax(110px,1.2fr) 62px;align-items:center;gap:12px}
+.teacher-list-heading{padding:12px 20px;color:#64748b;background:#f8fafc;border-block:1px solid var(--manage-border);font-size:10px;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+.manage-dashboard .teacher-account{display:block;padding:0;border-bottom:1px solid var(--manage-border)}
+.teacher-overview{list-style:none;padding:17px 20px;min-height:76px;cursor:pointer}
+.teacher-overview:hover{background:#f8fafc}
+.teacher-overview>strong{font-size:13px;overflow-wrap:anywhere;letter-spacing:-.01em}
+.teacher-group-pills{display:flex;align-items:center;flex-wrap:wrap;gap:5px;min-width:0}
+.teacher-group-pill{font-size:10px;font-weight:600;line-height:1.5;padding:3px 7px;border-radius:6px;background:#f1f5f9;color:#475569;max-width:100%;overflow-wrap:anywhere}
+.teacher-group-pills>.muted{font-size:11px}
+.manage-dashboard .teacher-status{font-size:10px;font-weight:650;padding:3px 7px;border:0;justify-self:start;white-space:nowrap}
+.manage-dashboard .teacher-status.teacher-active{background:#ecfdf5;color:#047857}
+.manage-dashboard .teacher-status.teacher-disabled{background:#f1f5f9;color:#64748b}
+.teacher-manage-label{display:inline-flex;justify-content:center;align-items:center;min-height:32px;font-size:11px;font-weight:650;color:#075985;border:1px solid #d5e1eb;background:#fff;border-radius:7px;padding:5px 6px}
+.teacher-account[open]>.teacher-overview{background:#f0f7fc;border-bottom:1px solid var(--manage-border)}
+.teacher-drawer{padding:18px 20px;background:#fbfdff;display:grid;gap:14px}
+.teacher-drawer-heading h3{margin-bottom:3px}
+.teacher-drawer-heading p{font-size:12px}
+.teacher-drawer>details{border:1px solid var(--manage-border);border-radius:9px;background:white;padding:0 12px}
+.teacher-drawer>details>summary{padding:12px 0;font-size:12px;font-weight:650;cursor:pointer;overflow-wrap:anywhere}
+.teacher-drawer>details[open]{padding-bottom:14px}
+.teacher-drawer fieldset{display:grid;gap:5px;border-color:var(--manage-border);padding:12px}
+.teacher-drawer legend{font-size:12px;font-weight:650}
+.teacher-drawer .group-choice{font-size:12px;gap:8px;font-weight:500;min-height:34px}
+.teacher-drawer .group-choice input{width:18px;height:18px;min-height:18px;accent-color:#075985}
+.teacher-drawer .teacher-danger-actions{justify-content:flex-end;border-top:1px solid var(--manage-border);padding-top:12px}
+.manage-dashboard .manage-danger{background:#fff;color:#a4263e;border-color:#f1d6dd;font-size:12px}
+.manage-dashboard .manage-danger:hover{background:#fff1f3;border-color:#e4a8b6}
+.manage-devices{margin:20px;border:1px solid var(--manage-border);border-radius:10px;background:#fafcfe}
+.manage-devices>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:650;padding:14px}
+.manage-devices>.entry{border-top:1px solid var(--manage-border);font-size:12px;padding:14px}
+.manage-devices h2{font-size:15px;margin-bottom:12px}
+.manage-devices p+p{margin-top:12px}
+.manage-devices button{display:block;margin-top:8px}
+.manage-workspace{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:20px;border:0!important;padding:0 2px;font-size:12px}
+.manage-workspace h2{font-size:12px;font-weight:650;color:#64748b}
+.manage-workspace .muted{font-size:12px}
+@media(max-width:1100px){.manage-grid{grid-template-columns:minmax(0,1fr)}.manage-section-header p{max-width:none}.teacher-list-heading,.teacher-overview{grid-template-columns:minmax(110px,1fr) 100px minmax(180px,1.5fr) 80px}.teacher-group-pill{font-size:12px}.teacher-status,.teacher-overview>strong{font-size:13px}}
+@media(max-width:600px){main{padding:16px 14px 32px}.toolbar{gap:12px}.tabs{margin:0;width:100%;flex-wrap:nowrap}.tabs button{flex:0 0 auto;font-size:12px;padding:9px 10px}.manage-grid{gap:18px}.manage-section-header{padding:20px 16px}.manage-section-header h2{font-size:18px}.manage-section-header p{font-size:12px}.manage-dashboard>.heading h2{font-size:23px}.manage-dashboard>.heading p{font-size:13px}.manage-enrollment-tools{padding:16px}.manage-dashboard .managed-group{margin:12px 14px}.manage-create-teacher{margin:16px}.teacher-list-heading{display:none}.teacher-overview{grid-template-columns:minmax(0,1fr) 70px;gap:9px;padding:16px}.teacher-overview>.teacher-status{justify-self:end}.teacher-group-pills{grid-column:1;grid-row:2}.teacher-manage-label{grid-column:2;grid-row:2;align-self:center}.teacher-group-pill{font-size:10px}.teacher-drawer{padding:16px}.manage-devices{margin:16px}.manage-dashboard .manage-tool>.entry{padding:14px}.manage-dashboard form>label{flex-basis:100%}.manage-dashboard form>button{width:100%}.manage-dashboard .group-summary{font-size:14px}.manage-workspace{display:block}.manage-workspace p{margin-top:4px}}
+.manage-dashboard form[data-form="student-details"] button,.manage-dashboard form[data-form="student-group"] button,.manage-dashboard form[data-form="rename-group"] button,.manage-dashboard form[data-form="teacher-group"] input[name="assigned"][value="true"]~button{background:#075985;border-color:#075985;color:#fff}
+
 </style><script src="capacitor.js"></script><script defer src="config.js"></script><script type="module" src="app.js"></script></head>
 <body><main>
 <header class="hero">

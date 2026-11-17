@@ -212,32 +212,54 @@ function teacherGroupEditor(teacher) {
     </details>`;
 }
 function adminPanel() {
-  return heading('Manage program','Manage student enrollment, groups and teacher access.') +
-    `<div class="entry"><h2>Registered mobile devices</h2>${(data.devices??[]).map(device=>`<p>${escapeHTML(device.platform)} · ${escapeHTML(device.id.slice(0,12))} · ${device.active?'Active':'Revoked'} ${device.active?`<button data-action="device-revoke" data-id="${escapeHTML(device.id)}">Revoke device and sessions</button>`:''}</p>`).join('')||'<p>No mobile devices enrolled.</p>'}</div>`+
-    (data.workspace ? `<div class="entry"><h2>${escapeHTML(data.workspace.name)}</h2>
-      <p class="muted">Sponsored access through ${new Intl.DateTimeFormat(undefined, {dateStyle:'medium',timeStyle:'short',timeZone:'America/New_York'}).format(data.workspace.expiresAt)} ET</p></div>` : '') +
-    `<div class="entry"><h2>Student groups</h2><form data-form="groups">
-      <label>Group name<input type="text" name="name" required maxlength="60"></label>
-      <button class="primary">Create Group</button></form>
-      <p class="muted">Click a group to view its students. Click a student to edit their name, grade or group.</p>
-      </div>` + data.groups.map(groupCard).join('') + unassignedStudents() +
-    studentImportPanel() + `<div class="entry"><h2>Students</h2><form data-form="students">
-      <label>Student name<input name="name" required maxlength="80"></label>
-      <label>Grade<input type="text" name="grade" required maxlength="60"></label>
-      <label>Student Group<select name="group">${groupOptions()}</select></label>
-      <button class="primary">Add Student</button></form></div>` +
-    `<div class="entry"><h2>Teacher accounts and groups</h2><p>Assign each teacher to one or more groups. Teachers can view and work with students in their assigned groups.</p><form data-form="teachers">
-      <label>User ID<input name="id" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false"></label>
-      <label>Password<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
-      <button class="primary">Create Teacher</button></form></div>` +
-    data.teachers.map(t => `<div class="entry controls"><div class="tools"><strong>${escapeHTML(t.id)}</strong>
-      <span class="badge">${t.active ? 'Active' : 'Disabled'}</span>
-      ${t.active ? `<button data-action="disable" data-id="${escapeHTML(t.id)}">Disable Account</button>` : ''}</div>
-      ${teacherGroupEditor(t)}
-      ${t.active ? `<form data-form="teacher-access"><input name="id" type="hidden" value="${escapeHTML(t.id)}">
-        <input name="action" type="hidden" value="reset">
-        <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
-        <button>Reset Password</button></form>` : ''}</div>`).join('');
+  return `<div class="manage-dashboard">` + heading('Manage program','Organize your groups, students and team from one workspace.') +
+    `<div class="manage-grid"><section class="manage-section card" aria-label="Groups and students">
+      <div class="manage-section-header"><div><span class="eyebrow">Enrollment</span><h2>Groups &amp; Students</h2><p class="muted">Open a group, then a student to make changes.</p></div><span class="manage-total">${data.groups.length} groups</span></div>
+      <div class="manage-enrollment-tools">
+        <details class="manage-tool" data-manage-key="add-student"><summary class="manage-tool-trigger">+ Add Student</summary>
+          <div class="entry manage-tool-body"><h3>Add a student</h3><form data-form="students">
+            <label>Student name<input name="name" required maxlength="80"></label>
+            <label>Grade<input type="text" name="grade" required maxlength="60"></label>
+            <label>Student Group<select name="group">${groupOptions()}</select></label>
+            <button class="primary">Add Student</button></form></div></details>
+        <details class="manage-tool" data-manage-key="import-csv" ${studentImport ? 'open' : ''}><summary class="manage-tool-trigger">Import CSV</summary>${studentImportPanel()}</details>
+        <details class="manage-tool manage-create-group" data-manage-key="create-group"><summary class="manage-tool-trigger">+ Create Group</summary>
+          <div class="entry manage-tool-body"><h3>Create a student group</h3><form data-form="groups">
+            <label>Group name<input type="text" name="name" required maxlength="60"></label>
+            <button class="primary">Create Group</button></form>
+            <p class="muted">Click a group to view its students. Click a student to edit their name, grade or group.</p></div></details>
+      </div>
+      <div class="manage-group-list">${data.groups.map(groupCard).join('') + unassignedStudents()}</div>
+    </section>
+    <section class="manage-section card" aria-label="Teachers and access">
+      <div class="manage-section-header"><div><span class="eyebrow">Team management</span><h2>Teachers &amp; Access</h2><p class="muted">Manage accounts and the groups each teacher can access.</p></div><span class="manage-total">${data.teachers.length} teachers</span></div>
+      <details class="manage-tool manage-create-teacher" data-manage-key="create-teacher"><summary class="manage-tool-trigger">+ Create Teacher</summary>
+        <div class="entry manage-tool-body"><h3>Teacher accounts and groups</h3><p>Assign each teacher to one or more groups. Teachers can view and work with students in their assigned groups.</p><form data-form="teachers">
+          <label>User ID<input name="id" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false"></label>
+          <label>Password<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
+          <button class="primary">Create Teacher</button></form></div></details>
+      <div class="teacher-list"><div class="teacher-list-heading" aria-hidden="true"><span>Teacher</span><span>Status</span><span>Assigned groups</span><span>Actions</span></div>
+      ${data.teachers.map(t => {
+        const assignedGroups=data.groups.filter(group=>data.assignments.some(a=>a.teacher_id===t.id&&a.group_id===group.id));
+        return `<details class="entry controls teacher-account" data-manage-key="teacher-account-${escapeHTML(t.id)}">
+          <summary class="teacher-overview"><strong>${escapeHTML(t.id)}</strong><span class="badge teacher-status ${t.active ? 'teacher-active' : 'teacher-disabled'}">${t.active ? 'Active' : 'Disabled'}</span>
+            <span class="teacher-group-pills">${assignedGroups.map(group=>`<span class="teacher-group-pill">${escapeHTML(group.name)}</span>`).join('') || '<span class="muted">No groups assigned</span>'}</span><span class="teacher-manage-label">Manage<span aria-hidden="true"> ⌄</span></span></summary>
+          <div class="teacher-drawer"><div class="teacher-drawer-heading"><h3>Manage ${escapeHTML(t.id)}</h3><p class="muted">Update group access or account credentials.</p></div>
+            ${teacherGroupEditor(t)}
+            ${t.active ? `<details class="teacher-password" data-manage-key="teacher-password-${escapeHTML(t.id)}"><summary>Reset Password</summary>
+              <form data-form="teacher-access"><input name="id" type="hidden" value="${escapeHTML(t.id)}">
+                <input name="action" type="hidden" value="reset">
+                <label>New password for ${escapeHTML(t.id)}<input name="password" type="password" required minlength="6" maxlength="128" autocomplete="new-password"></label>
+                <button>Reset Password</button></form></details>
+              <div class="tools teacher-danger-actions"><button class="manage-danger" data-action="disable" data-id="${escapeHTML(t.id)}">Disable Account</button></div>` : ''}
+          </div></details>`;
+      }).join('')}
+      </div>
+      <details class="manage-devices" data-manage-key="registered-devices"><summary><span>Registered mobile devices</span><span class="manage-total">${(data.devices??[]).length}</span></summary>
+        <div class="entry"><h2>Registered mobile devices</h2>${(data.devices??[]).map(device=>`<p>${escapeHTML(device.platform)} · ${escapeHTML(device.id.slice(0,12))} · ${device.active?'Active':'Revoked'} ${device.active?`<button class="manage-danger" data-action="device-revoke" data-id="${escapeHTML(device.id)}">Revoke device and sessions</button>`:''}</p>`).join('')||'<p>No mobile devices enrolled.</p>'}</div></details>
+    </section></div>`+
+    (data.workspace ? `<div class="entry manage-workspace"><h2>${escapeHTML(data.workspace.name)}</h2>
+      <p class="muted">Sponsored access through ${new Intl.DateTimeFormat(undefined, {dateStyle:'medium',timeStyle:'short',timeZone:'America/New_York'}).format(data.workspace.expiresAt)} ET</p></div>` : '') + `</div>`;
 }
 function studentImportPanel() {
   const preview = studentImport;
