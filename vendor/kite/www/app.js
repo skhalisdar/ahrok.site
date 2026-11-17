@@ -97,10 +97,33 @@ function metric(label, count, detail) {
 function groupLabel(student) {
   return student.group_name ? ' · ' + escapeHTML(student.group_name) : '';
 }
+
+function groupedStudentSections(students, section, renderStudents) {
+  const groups = new Map(data.groups.map(group => [group.id, {id:group.id,name:group.name,students:[]}]));
+  for (const student of students) {
+    const id = student.group_id ?? 'unassigned';
+    if (!groups.has(id)) groups.set(id, {id,name:student.group_name ?? 'Unassigned students',students:[]});
+    groups.get(id).students.push(student);
+  }
+  const searching = Boolean($('search').value.trim());
+  return [...groups.values()].filter(group => !searching || group.students.length).map(group =>
+    `<details class="managed-group roster-group" data-manage-key="${section}-group-${group.id}" ${searching?'open':''}>
+      <summary class="group-summary"><strong>${escapeHTML(group.name)}</strong><span class="badge">${group.students.length} students</span></summary>
+      <div class="roster-group-content">${group.students.length ? renderStudents(group.students) : '<p class="empty">No students in this group.</p>'}</div>
+    </details>`).join('');
+}
 function roster(students, admin) {
-  return heading('Student roster', students.length + ' matching students', admin ?
-    '<button class="primary" data-action="all">Mark All Present</button>' : '') +
-    students.map(s => {
+  return heading('Attendance and homework', 'Open a group to view students. ' + students.length + ' matching students.', admin ?
+    '<button class="primary" data-action="all">Mark all groups present</button>' : '') +
+    groupedStudentSections(students, 'roster', rosterRows);
+}
+function courses(students) {
+  return heading('Skill milestones','Open a group to view student progress. Steps carry across dates.') +
+    groupedStudentSections(students, 'courses', courseCards);
+}
+
+function rosterRows(students) {
+  return students.map(s => {
       const name = escapeHTML(s.name);
       const select = field => `<label><small>${field === 'attendance' ? 'Attendance' : 'Homework'}</small>
         <select data-student="${s.id}" data-field="${field}" aria-label="${field} for ${name}"
@@ -112,8 +135,8 @@ function roster(students, admin) {
         ${s.active ? `<button data-action="note" data-student="${s.id}" aria-label="Save note for ${name}">Save Note</button>` : ''}</div>`;
     }).join('');
 }
-function courses(students) {
-  return heading('Skill milestones','Steps carry across dates') + '<div class="course-grid">' +
+function courseCards(students) {
+  return '<div class="course-grid">' +
     students.map(s => `<article class="course card">
       <div class="name">${escapeHTML(s.name)}<small>Grade ${escapeHTML(s.grade)}${groupLabel(s)}</small></div>
       <p>Step ${s.level} / 5</p><progress max="5" value="${s.level}" aria-label="${escapeHTML(s.name)} skill progress"></progress>
@@ -302,7 +325,7 @@ function render() {
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
-  if (tab === 'admin') for (const element of $('panel').querySelectorAll('details[data-manage-key]')) element.open = openEditors.includes(element.dataset.manageKey);
+  for (const element of $('panel').querySelectorAll('details[data-manage-key]')) if (openEditors.includes(element.dataset.manageKey)) element.open = true;
 }
 async function refresh() {
   data = await api('desk?day=' + encodeURIComponent($('date').value));
