@@ -9,6 +9,7 @@ import {resolve} from 'node:path';
 import {bindInstitution,csv} from './operations.mjs';
 import {createMobileProof,sha256} from './mobile-proof.mjs';
 import {randomUUID} from 'node:crypto';
+import {createScheduleStore} from './schedules.mjs';
 import {reportPDF} from './pdf-report.mjs';
 import {importStudents} from './www/student-import.mjs';
 
@@ -27,6 +28,7 @@ async function workspaceAccess() {
 }
 
 const sql = statement => db.prepare(statement);
+const schedules = createScheduleStore(db);
 const scryptOptions = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 function passwordHash(password) {
   const salt = randomBytes(16).toString('hex');
@@ -103,6 +105,7 @@ const programClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/pro
 const capacitorRuntime = await readFile(resolve(process.cwd(), 'vendor/kite/www/capacitor.js'));
 const safeHeaders = {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
 const shell = await readFile(resolve(process.cwd(), 'vendor/kite/www/shell.mjs'));
+const scheduleClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/schedule-view.mjs'));
 const logo = await readFile(resolve(process.cwd(), 'vendor/kite/www/kite.svg'));
 const studentImportClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/student-csv.mjs'));
 const port = Number(env.PORT ?? 4173);
@@ -259,7 +262,7 @@ async function api(req, url, audience, headers) {
     return {token:result.token, id, role, expiresAt:result.expiresAt, institutionId:configuredInstitution,today:programDay()};
   }
   // Read the body before checking the session so a slow upload cannot use a session revoked in the meantime.
-  const input = req.method === 'POST' ? await body(req, route === 'POST /api/import-students' ? 262144 : 8192) : {};
+  const input = req.method === 'POST' ? await body(req, route === 'POST /api/import-students' ? 262144 : route === 'POST /api/schedule' ? 65536 : 8192) : {};
   const verified = await auth.requireSession(audience, req);
   const user = {id:verified.accountId,role:verified.role,tokenHash:verified.tokenDigest};
   const admin = user.role === 'admin';
@@ -270,6 +273,7 @@ async function api(req, url, audience, headers) {
   }
   const workspace = (await workspaceAccess());
   if(route==='GET /api/session')return {id:user.id,role:user.role,today:programDay()};
+  if(route==='GET /api/schedule')return await schedules.read(user,dateValue(url.searchParams.get('day')));
   if (route === 'GET /api/desk') {
     const day = dateValue(url.searchParams.get('day'));
     const students = (await sql(`SELECT s.id, s.name, s.grade, s.level, s.active,
@@ -365,6 +369,7 @@ async function api(req, url, audience, headers) {
   }
   if (route === 'POST /api/activity-record') return (await saveActivityRecord(user, input));
   if (!admin) fail(403, 'Administrator access required.');
+  if(route==='POST /api/schedule')return await schedules.save(user,input);
   if (route === 'POST /api/import-students') return await importStudents(db, input);
   if(route==='POST /api/rename-group') {
     const name=typeof input.name==='string'?input.name.trim().replace(/\s+/g,' '):'';
@@ -549,6 +554,7 @@ const handler = async (req,res) => {
     if (req.method === 'GET' && asset === '/program-panels.mjs') return send(200,programClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/capacitor.js') return send(200,capacitorRuntime,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/config.js') return send(200,config,'text/javascript; charset=utf-8');
+    if (req.method === 'GET' && asset === '/schedule-view.mjs') return send(200,scheduleClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/shell.mjs') return send(200,shell,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/student-csv.mjs') return send(200,studentImportClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/kite.svg') return send(200,logo,'image/svg+xml');

@@ -1,6 +1,7 @@
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
 import {programPanel} from './program-panels.mjs';
+import {schedulePanel,scheduleRow,schedulePayload,changeScheduleEditor,captureScheduleDraft,resetScheduleDrafts,updateScheduleNow} from './schedule-view.mjs';
 import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-csv.mjs';
 
 const native = Boolean(window.Capacitor?.isNativePlatform());
@@ -11,6 +12,8 @@ const statuses = {attendance:['Unmarked','Present','Absent','Tardy'],
   homework:['Unmarked','Complete','Needs Help','No Homework']};
 let session, data, tab = 'roster', busy = false;
 let expiryTimer;
+let scheduleData=null;
+setInterval(()=>{if(session&&tab==='schedule'&&!busy)updateScheduleNow(scheduleData,$('panel'));},30000);
 let studentImport = null;
 function expireMobileSession() {
   if(native&&session?.expiresAt<=Date.now()) {
@@ -37,6 +40,7 @@ today();
 $('login-title').textContent = native ? 'Staff login' : 'Administrator login';
 $('identity').textContent = native ? 'Staff workspace' : 'Administrator portal';
 function loggedOut() {
+  scheduleData=null;resetScheduleDrafts();
   studentImport = null;
   window.clearTimeout(expiryTimer);
   session = data = null;
@@ -321,7 +325,7 @@ function render() {
     (s.name + ' grade ' + s.grade + ' ' + (s.group_name ?? '')).toLowerCase().includes(query));
   for (const item of $('tabs').querySelectorAll('button')) item.dataset.tab === tab ? item.setAttribute('aria-current','page') : item.removeAttribute('aria-current');
   const openEditors = [...$('panel').querySelectorAll('details[data-manage-key][open]')].map(element => element.dataset.manageKey);
-  $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
+  $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query,schedule:scheduleData,schedulePanel,today:data.today}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
@@ -330,6 +334,7 @@ function render() {
 async function refresh() {
   data = await api('desk?day=' + encodeURIComponent($('date').value));
   today(data.today);
+  if(tab==='schedule')scheduleData=await api('schedule?day='+encodeURIComponent($('date').value));
   render();
 }
 async function change(route, payload, label) {
@@ -347,7 +352,7 @@ async function enterWorkspace() {
   mountShell($('tabs'), {
     mode:session.role === 'teacher' ? 'teacher' : native ? 'admin-mobile' : 'admin',
     active:tab,
-    onNavigate(screen) { if (busy) return; tab = screen; render(); }
+    onNavigate(screen) { if (busy) return; tab = screen; if(tab==='schedule')task(refresh);else render(); }
   });
 }
 $('login-form').addEventListener('submit',event => {
@@ -375,6 +380,7 @@ $('date').addEventListener('change',() => task(async () => {
 $('search').addEventListener('input',render);
 $('panel').addEventListener('change',event => {
   const target = event.target;
+  if(target.hasAttribute('data-schedule-control')){changeScheduleEditor(target.form,scheduleData);return;}
   if (target.id === 'activity-choice') {
     activityId = Number(target.value);
     activityGroup = '';
@@ -416,12 +422,22 @@ $('panel').addEventListener('change',event => {
     render();
   });
 });
+$('panel').addEventListener('input',event=>{const form=event.target.closest('form[data-form="schedule"]');if(form&&scheduleData)captureScheduleDraft(form,scheduleData);});
 $('panel').addEventListener('submit',event => {
   event.preventDefault();
   const route = event.target.dataset.form;
   if (!route) return;
   const form = new FormData(event.target);
   const payload = Object.fromEntries(form);
+  if(route==='schedule'){
+    const editor=event.target;
+    task(async()=>{
+      const changes=schedulePayload(editor,scheduleData);
+      if(!confirm('Are you sure you would like to alter the current schedule?'))return;
+      await api('schedule',{...changes,confirmed:true});
+      resetScheduleDrafts(changes.group);await refresh();message('Schedule updated');
+    });return;
+  }
   if (route === 'student-csv-preview') {
     task(async () => {
       studentImport = null;
@@ -485,6 +501,21 @@ $('panel').addEventListener('click',event => {
   const button = event.target.closest('[data-action]');
   if (!button || busy) return;
   const {action,student,id,delta} = button.dataset;
+  if(action.startsWith('schedule-')){
+    if(session?.role!=='admin')return;
+    const editor=button.closest('form[data-form="schedule"]');
+    if(action==='schedule-add-row'){
+      if(editor.querySelectorAll('[data-schedule-row]').length>=12){message('Use up to 12 blocks per day.',true);return;}
+      editor.querySelector('[data-schedule-rows]').insertAdjacentHTML('beforeend',scheduleRow());captureScheduleDraft(editor,scheduleData);
+    }else if(action==='schedule-remove-row'){button.closest('[data-schedule-row]').remove();captureScheduleDraft(editor,scheduleData);}
+    else if(action==='schedule-cancel'){resetScheduleDrafts(Number(editor.dataset.group));editor.closest('details').open=false;render();}
+    else if(action==='schedule-reset-date')task(async()=>{
+      const group=scheduleData.groups.find(g=>g.id===Number(button.dataset.group));
+      if(!confirm('Are you sure you would like to alter the current schedule?'))return;
+      await api('schedule',{group:group.id,scope:'date',day:scheduleData.day,expectedVersion:group.dateVersion,reset:true,confirmed:true});
+      resetScheduleDrafts(group.id);await refresh();message('Weekly timetable restored for this date');
+    });return;
+  }
   if (action === 'cancel-student-import') { studentImport = null; render(); return; }
   if (action === 'import-students' && studentImport && session?.role === 'admin') {
     const preview = studentImport;

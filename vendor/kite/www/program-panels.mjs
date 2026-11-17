@@ -1,6 +1,7 @@
 // These views use only backend-authorized data. Permissions are enforced again by the API.
-export function programPanel(tab,{data,admin,day,escapeHTML:e,heading,renderGroups,query=''}) {
+export function programPanel(tab,{data,admin,day,escapeHTML:e,heading,renderGroups,query='',schedule,schedulePanel,today}) {
   query=query.trim().toLowerCase();
+  if(tab==='schedule')return schedulePanel({schedule,admin,today,e,heading});
   const students=data.students.filter(s=>s.active && (s.name+' '+s.grade+' '+(s.group_name??'')).toLowerCase().includes(query));
   function eventGroups(events, key, renderEvent) {
     if (!events.length) return '';
