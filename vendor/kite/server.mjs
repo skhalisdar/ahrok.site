@@ -330,11 +330,11 @@ async function api(req, url, audience, headers) {
     if(rows.length>50000)fail(413,'Export too large; choose a smaller date range.');
     if(format==='pdf'){
       if(rows.length>2000)fail(413,'PDF exports support up to 2,000 records; choose a smaller date range or download CSV.');
-      headers['Content-Disposition']=`attachment; filename="kite-${type}-${from}-${to}.pdf"`;
-      return {pdf:await reportPDF({type,from,to,columns,rows,fontPath:resolve(process.cwd(),'vendor/kite/fonts/DejaVuSans.ttf')}),type:'application/pdf'};
+      headers['Content-Disposition']=`attachment; filename="nycmc-wellspring-compass-after-school-${type}-${from}-${to}.pdf"`;
+      return {pdf:await reportPDF({type,from,to,columns,rows,fontPath:resolve(process.cwd(),'vendor/kite/fonts/DejaVuSans.ttf'),logoPaths:[resolve(process.cwd(),'vendor/kite/report-assets/nycmc-wellspring.png'),resolve(process.cwd(),'vendor/kite/report-assets/compass.png')]}),type:'application/pdf'};
     }
-    headers['Content-Disposition']=`attachment; filename="kite-${type}-${from}-${to}.csv"`;
-    return {csv:csv(columns,rows),type:'text/csv; charset=utf-8'};
+    headers['Content-Disposition']=`attachment; filename="nycmc-wellspring-compass-after-school-${type}-${from}-${to}.csv"`;
+    return {csv:csv(['organization','partner','program',...columns],rows.map(row=>({organization:'NYCMC Wellspring',partner:'COMPASS NYC',program:'After School',...row}))),type:'text/csv; charset=utf-8'};
   }
   if (route === 'POST /api/record') {
     const {student, field, value} = input;

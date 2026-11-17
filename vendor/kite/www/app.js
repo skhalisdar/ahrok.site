@@ -444,7 +444,7 @@ $('panel').addEventListener('submit',event => {
       const headers=native?await mobileHeaders({origin,path,session}):{};
       const response=await fetch((native?origin+'/api/mobile/':'/kite/api/admin/')+path,{headers,credentials:native?'omit':'same-origin'});
       if(!response.ok)throw new Error((await response.json()).error??'Export failed.');
-      const filename=`kite-${payload.type}-${payload.from}-${payload.to}.${payload.format}`;
+      const filename=`nycmc-wellspring-compass-after-school-${payload.type}-${payload.from}-${payload.to}.${payload.format}`;
       if(native){
         const plugin=window.Capacitor.registerPlugin('KiteDevice');
         let result;
