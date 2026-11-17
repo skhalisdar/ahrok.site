@@ -56,6 +56,15 @@ fieldset{border:1px solid #cbd5e1;border-radius:10px;margin:0;padding:6px 10px}
 .hero h1{display:flex;align-items:center;gap:9px}.tabs button{display:flex;align-items:center;gap:6px}
 .tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6}
 .badge:not(.in){background:#fef3c7;color:#0f172a;border-left:3px solid #f59e0b}
+.managed-group{margin:12px 20px;border:1px solid #dbe3ee;border-radius:12px;overflow:hidden}
+.group-summary,.student-summary{cursor:pointer;padding:16px;overflow-wrap:anywhere;min-height:48px}
+.group-summary{background:#f0f7fc;font-size:17px}.group-summary .badge{margin-left:12px;font-size:13px}
+.group-content{padding:12px 16px}.group-content h3{margin:0 0 12px}
+.student-editor{border-top:1px solid #e2e8f0}.student-summary{font-size:15px}.student-summary span{margin-left:12px;color:#536078}
+.student-controls{display:grid;gap:14px;padding:4px 16px 18px}.student-controls form{gap:12px}.student-controls input,.student-controls select{max-width:100%;min-width:0}
+.student-controls [data-action=archive]{justify-self:start;color:#9c2642}
+.group-settings{margin-top:16px;border-top:1px solid #dbe3ee;padding-top:12px}.group-settings>summary{cursor:pointer;padding:8px 0}.group-settings .controls{padding-top:12px}
+@media(max-width:600px){.managed-group{margin:10px 12px}.group-content{padding:10px}.group-summary{font-size:16px}.student-controls{padding-inline:4px}.student-controls label{width:100%}.student-controls input,.student-controls select{width:100%}}
 </style><script src="capacitor.js"></script><script defer src="config.js"></script><script type="module" src="app.js"></script></head>
 <body><main>
 <header class="hero">

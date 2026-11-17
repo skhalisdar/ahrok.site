@@ -130,12 +130,30 @@ function staff(admin, ownShift) {
       <time datetime="${escapeHTML(event.at)}">${new Date(event.at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</time></div>`).join('') :
     '<p class="empty">No shift activity for this date.</p>');
 }
+function studentEditor(s) {
+  return `<details class="student-editor" data-manage-key="student-${s.id}"><summary class="student-summary">
+      <strong>${escapeHTML(s.name)}</strong><span>Grade ${escapeHTML(s.grade)}</span>
+</summary><div class="student-controls"><p class="muted">Edit student</p><form data-form="student-details"><input name="student" type="hidden" value="${s.id}"><label>Name<input name="name" value="${escapeHTML(s.name)}" maxlength="80" required></label><label>Grade<input name="grade" value="${escapeHTML(s.grade)}" maxlength="60" required></label><button>Save student</button></form>
+      ${data.groups.length ? `<form data-form="student-group">
+        <input name="student" type="hidden" value="${s.id}">
+        <label>Group<select name="group" aria-label="Group for ${escapeHTML(s.name)}">${groupOptions(s.group_id)}</select></label><button>Save Group</button></form>` : ''}
+      <button data-action="archive" data-student="${s.id}">Archive Student</button></div></details>`;
+}
+function unassignedStudents() {
+  const students = data.students.filter(s => s.active && (s.group_id == null || !data.groups.some(g => g.id === s.group_id)));
+  if (!students.length) return '';
+  return `<details class="managed-group" data-manage-key="unassigned"><summary class="group-summary"><strong>Unassigned students</strong><span class="badge">${students.length} students</span></summary><div class="group-content">${students.map(studentEditor).join('')}</div></details>`;
+}
 function groupCard(group) {
   const name = escapeHTML(group.name);
   const assigned = new Set(data.assignments.filter(a => a.group_id === group.id).map(a => a.teacher_id));
   const available = data.teachers.filter(t => t.active && !assigned.has(t.id));
-  return `<div class="entry">
-    <h3>${name}</h3>
+  const students = data.students.filter(s => s.active && s.group_id === group.id);
+  return `<details class="managed-group" data-manage-key="group-${group.id}">
+    <summary class="group-summary"><strong>${name}</strong><span class="badge">${students.length} students</span></summary>
+    <div class="group-content"><h3>Students</h3>
+    ${students.length ? students.map(studentEditor).join('') : '<p class="muted">No students in this group yet.</p>'}
+    <details class="group-settings"><summary>Group settings and teachers</summary><div class="controls">
     <form data-form="rename-group"><input type="hidden" name="group" value="${group.id}"><label>Group name<input name="name" maxlength="60" required value="${name}"></label><button>Rename group</button></form>
     ${assigned.size ? [...assigned].map(id => `<form class="tools" data-form="teacher-group">
       <input type="hidden" name="group" value="${group.id}"><input type="hidden" name="teacher" value="${escapeHTML(id)}">
@@ -148,7 +166,7 @@ function groupCard(group) {
       <label>Teacher<select name="teacher" required aria-label="Teacher for ${name}">
         <option value="">Choose a teacher</option>${available.map(t => `<option>${escapeHTML(t.id)}</option>`).join('')}
       </select></label><button>Assign Teacher</button></form>` : ''}
-  </div>`;
+  </div></details></div></details>`;
 }
 function groupOptions(selected) {
   return '<option value="">No group</option>' + data.groups.map(group =>
@@ -162,20 +180,13 @@ function adminPanel() {
     `<div class="entry"><h2>Student groups</h2><form data-form="groups">
       <label>Group name<input type="text" name="name" required maxlength="60"></label>
       <button class="primary">Create Group</button></form>
-      <p class="muted">Choose a group when adding a student, or assign it later from the roster below.</p>
-      </div>` + data.groups.map(groupCard).join('') +
+      <p class="muted">Click a group to view its students. Click a student to edit their name, grade or group.</p>
+      </div>` + data.groups.map(groupCard).join('') + unassignedStudents() +
     studentImportPanel() + `<div class="entry"><h2>Students</h2><form data-form="students">
       <label>Student name<input name="name" required maxlength="80"></label>
       <label>Grade<input type="text" name="grade" required maxlength="60"></label>
       <label>Student Group<select name="group">${groupOptions()}</select></label>
       <button class="primary">Add Student</button></form></div>` +
-    data.students.filter(s => s.active).map(s => `<div class="entry tools">
-      <strong>${escapeHTML(s.name)}</strong><span>Grade ${escapeHTML(s.grade)}</span>
-      <details><summary>Edit student</summary><form data-form="student-details"><input name="student" type="hidden" value="${s.id}"><label>Name<input name="name" value="${escapeHTML(s.name)}" maxlength="80" required></label><label>Grade<input name="grade" value="${escapeHTML(s.grade)}" maxlength="60" required></label><button>Save student</button></form></details>
-      ${data.groups.length ? `<form data-form="student-group">
-        <input name="student" type="hidden" value="${s.id}">
-        <label>Group<select name="group" aria-label="Group for ${escapeHTML(s.name)}">${groupOptions(s.group_id)}</select></label><button>Save Group</button></form>` : ''}
-      <button data-action="archive" data-student="${s.id}">Archive Student</button></div>`).join('') +
     `<div class="entry"><h2>Teacher accounts</h2><form data-form="teachers">
       <label>User ID<input name="id" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false"></label>
       <label>Password<input name="password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
@@ -286,10 +297,12 @@ function render() {
   const students = (tab === 'courses' ? active : data.students).filter(s =>
     (s.name + ' grade ' + s.grade + ' ' + (s.group_name ?? '')).toLowerCase().includes(query));
   for (const item of $('tabs').querySelectorAll('button')) item.dataset.tab === tab ? item.setAttribute('aria-current','page') : item.removeAttribute('aria-current');
+  const openEditors = [...$('panel').querySelectorAll('details[data-manage-key][open]')].map(element => element.dataset.manageKey);
   $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
+  if (tab === 'admin') for (const element of $('panel').querySelectorAll('details[data-manage-key]')) element.open = openEditors.includes(element.dataset.manageKey);
 }
 async function refresh() {
   data = await api('desk?day=' + encodeURIComponent($('date').value));
@@ -486,4 +499,5 @@ async function restoreAdminSession() {
   });
 }
 if (!native) await restoreAdminSession();
+
 
