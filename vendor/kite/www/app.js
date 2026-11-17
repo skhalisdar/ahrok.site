@@ -1,6 +1,6 @@
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
-import {programPanel} from './program-panels.mjs';
+import {programPanel,dashboardPanel,summarizeDesk,weekDays,uiIcon,richEmpty} from './program-panels.mjs';
 import {schedulePanel,scheduleRow,schedulePayload,changeScheduleEditor,captureScheduleDraft,resetScheduleDrafts,updateScheduleNow} from './schedule-view.mjs';
 import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-csv.mjs';
 
@@ -13,6 +13,7 @@ const statuses = {attendance:['Unmarked','Present','Absent','Tardy'],
 let session, data, tab = 'roster', busy = false;
 let expiryTimer;
 let scheduleData=null;
+let dashboardHistory=[],dashboardHistoryStatus="idle",dashboardSchedule=null,dashboardScheduleUnavailable=false,dashboardUpdatedAt=null;
 setInterval(()=>{if(session&&tab==='schedule'&&!busy)updateScheduleNow(scheduleData,$('panel'));},30000);
 let studentImport = null;
 function expireMobileSession() {
@@ -41,6 +42,7 @@ $('login-title').textContent = native ? 'Staff login' : 'Administrator login';
 $('identity').textContent = native ? 'Staff workspace' : 'Administrator portal';
 function loggedOut() {
   scheduleData=null;resetScheduleDrafts();
+  dashboardHistory=[];dashboardHistoryStatus="idle";dashboardSchedule=null;dashboardScheduleUnavailable=false;dashboardUpdatedAt=null;
   studentImport = null;
   window.clearTimeout(expiryTimer);
   session = data = null;
@@ -93,7 +95,8 @@ function options(values, selected) {
   return values.map(value => `<option ${value === selected ? 'selected' : ''}>${value}</option>`).join('');
 }
 function heading(title, text, action = '') {
-  return `<div class="heading"><div><h2>${title}</h2><p class="muted">${text}</p></div>${action}</div>`;
+  const icon={dashboard:'dashboard',roster:'attendance',courses:'trend',schedule:'schedule',activities:'activity',staff:'staff',incidents:'incident',pickup:'shield',reports:'report',admin:'dashboard'}[tab]??'dashboard';
+  return `<div class="heading"><div><h2><span class="module-title-icon">${uiIcon(icon)}</span>${title}</h2><p class="muted">${text}</p></div>${action}</div>`;
 }
 function metric(label, count, detail) {
   return `<div class="card metric"><small>${label}</small><strong>${count}</strong><small>${detail}</small></div>`;
@@ -112,9 +115,16 @@ function groupedStudentSections(students, section, renderStudents) {
   const searching = Boolean($('search').value.trim());
   return [...groups.values()].filter(group => group.students.length || (!searching && ['roster','courses','pickup'].includes(section))).map(group =>
     `<details class="managed-group roster-group" data-manage-key="${section}-group-${group.id}" ${searching?'open':''}>
-      <summary class="group-summary"><strong>${escapeHTML(group.name)}</strong><span class="badge">${group.students.length} students</span></summary>
+      <summary class="group-summary"><strong>${escapeHTML(group.name)}</strong><span class="badge">${group.students.length} students</span>${groupProgress(group.students,section)}</summary>
       <div class="roster-group-content">${group.students.length ? renderStudents(group.students) : '<p class="empty">No students in this group.</p>'}</div>
     </details>`).join('');
+}
+function groupProgress(students,section) {
+  const active=students.filter(s=>s.active),total=active.length;if(!total)return '';
+  const meter=(label,value,tone)=>`<span class="group-meter ${tone}"><span>${label}<b>${Math.round(value)}%</b></span><span class="mini-track"><i style="width:${Math.max(0,Math.min(100,value))}%"></i></span></span>`;
+  if(section==='roster')return `<span class="group-summary-progress">${meter('Present',active.filter(s=>s.attendance==='Present').length/total*100,'attendance-meter')}${meter('HW done',active.filter(s=>s.homework==='Complete').length/total*100,'homework-meter')}</span>`;
+  if(section==='courses')return `<span class="group-summary-progress">${meter('Average progress',active.reduce((sum,s)=>sum+s.level,0)/total/5*100,'mastery-meter')}</span>`;
+  return '';
 }
 function roster(students, admin) {
   return heading('Attendance and homework', 'Open a group to view students. ' + students.length + ' matching students.', admin ?
@@ -143,7 +153,7 @@ function courseCards(students) {
   return '<div class="course-grid">' +
     students.map(s => `<article class="course card">
       <div class="name">${escapeHTML(s.name)}<small>Grade ${escapeHTML(s.grade)}${groupLabel(s)}</small></div>
-      <p>Step ${s.level} / 5</p><progress max="5" value="${s.level}" aria-label="${escapeHTML(s.name)} skill progress"></progress>
+      <div class="step-track" aria-hidden="true">${Array.from({length:5},(_,i)=>`<span class="${i<s.level?'step-done':''}">${i<s.level?'✓':i+1}</span>`).join('')}</div><p>Step ${s.level} / 5</p><progress max="5" value="${s.level}" aria-label="${escapeHTML(s.name)} skill progress"></progress>
       <div class="steps"><button data-action="step" data-student="${s.id}" data-delta="-1" ${s.level === 0 ? 'disabled' : ''}>−1 Step</button>
       <button data-action="step" data-student="${s.id}" data-delta="1" ${s.level === 5 ? 'disabled' : ''}>+1 Step</button></div></article>`).join('') + '</div>';
 }
@@ -151,11 +161,11 @@ function staff(admin, ownShift) {
   const action = admin ? '' : `<button class="primary" data-action="shift" data-in="${ownShift ? '0' : '1'}"
     ${$('date').value === data.today ? '' : 'disabled'}>${ownShift ? 'Sign Out of Shift' : 'Sign In to Shift'}</button>`;
   return heading(admin ? 'Staff log' : 'My staff log', admin ? 'Teacher check-ins and check-outs for the selected date.' :
-    "Select today's date to record your shift.", action) + (data.staff.length ? data.staff.map(event =>
+    "Select today's date to record your shift.", action) + `<div class="shift-summary"><div><span class="status-dot"></span><strong>${summarizeDesk(data).onShift}</strong> On Shift</div><div><strong>${summarizeDesk(data).completedShifts}</strong> Completed</div><span class="muted">Latest status per staff member</span></div>` + (data.staff.length ? data.staff.map(event =>
     `<div class="staff"><div class="name">${escapeHTML(event.teacher)}</div>
       <span class="badge ${event.signed_in ? 'in' : ''}">${event.signed_in ? 'Signed In' : 'Signed Out'}</span>
       <time datetime="${escapeHTML(event.at)}">${new Date(event.at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}</time></div>`).join('') :
-    '<p class="empty">No shift activity for this date.</p>');
+    richEmpty('No shift activity yet',"Staff check-ins and check-outs for the selected date will appear here.",'staff'));
 }
 function studentEditor(s) {
   return `<details class="student-editor" data-manage-key="student-${s.id}"><summary class="student-summary">
@@ -306,16 +316,17 @@ function activityForm(activity) {
 function activityPanel(admin, query) {
   const activities = data.activities;
   const activity = activities.find(a => a.id === activityId) ?? activities[0];
-  const setup = admin ? `<div class="entry"><details class="activity-details" ${activities.length ? '' : 'open'}>
-    <summary>Create an activity</summary>${activityForm()}</details></div>` : '';
+  const setup = admin ? `<div class="entry"><details class="activity-details" >
+    <summary>+ New Activity</summary>${activityForm()}</details></div>` : '';
   const header = heading(admin ? 'Activities' : 'My activities','Record participation by date and track progress for each activity.');
-  if (!activity) return header + setup + '<p class="empty">No activities assigned yet.</p>';
+  if (!activity) return header + setup + richEmpty('Room for something great','Your assigned activities and student participation will appear here.','activity');
   activityId = activity.id;
   const groups = new Map(activity.students.map(s => [String(s.group_id),s.group_name]));
   if (activityGroup && !groups.has(activityGroup)) activityGroup = '';
   const students = activity.students.filter(s => (!activityGroup || String(s.group_id) === activityGroup) &&
     (s.name + ' ' + s.group_name).toLowerCase().includes(query));
-  return header + setup + `<div class="entry controls">
+  const cards=`<div class="activity-catalog">${activities.map(item=>`<button type="button" class="activity-tile ${item.id===activity.id?'selected':''}" data-activity-card="${item.id}" aria-pressed="${item.id===activity.id}"><span class="instructor-avatar">${escapeHTML(item.teacher_id.slice(0,2).toUpperCase())}</span><span><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.teacher_id)}</small><span class="activity-group-badges">${[...new Map(item.students.map(student=>[student.group_id,student.group_name])).values()].map(name=>`<span>${escapeHTML(name)}</span>`).join('')||'<span>No enrolled groups</span>'}</span></span></button>`).join('')}</div>`;
+  return header + setup + cards + `<div class="entry controls">
     <div class="tools activity-controls">
       <label>Activity<select id="activity-choice">${activities.map(a =>
         `<option value="${a.id}" ${a.id === activity.id ? 'selected' : ''}>${escapeHTML(a.name)}</option>`).join('')}</select></label>
@@ -341,6 +352,9 @@ function activityPanel(admin, query) {
 function render() {
   if (!session || !data) return;
   const admin = session.role === 'admin';
+  $('panel').dataset.module=tab;
+  $('metrics').hidden=true;
+  $('date-wrap').hidden=['admin','reports','courses'].includes(tab);
   const groupNames = admin || !data.groups.length ? '' : ' · Groups: ' + data.groups.map(g => g.name).join(', ');
   const institution = data.workspace ? data.workspace.name + ' · ' : '';
   $('identity').textContent = institution + (admin ? 'Administrator' : 'Teacher') + ' · ' + session.id + groupNames;
@@ -360,17 +374,33 @@ function render() {
     (s.name + ' grade ' + s.grade + ' ' + (s.group_name ?? '')).toLowerCase().includes(query));
   for (const item of $('tabs').querySelectorAll('button')) item.dataset.tab === tab ? item.setAttribute('aria-current','page') : item.removeAttribute('aria-current');
   const openEditors = [...$('panel').querySelectorAll('details[data-manage-key][open]')].map(element => element.dataset.manageKey);
-  $('panel').innerHTML = programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query,schedule:scheduleData,schedulePanel,today:data.today}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
+  $('panel').innerHTML = (tab==='dashboard'&&admin ? dashboardPanel({data,day:$('date').value,history:dashboardHistory,historyStatus:dashboardHistoryStatus,schedule:dashboardSchedule,scheduleUnavailable:dashboardScheduleUnavailable,updatedAt:dashboardUpdatedAt,e:escapeHTML,heading}) : null) ?? programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query,schedule:scheduleData,schedulePanel,today:data.today}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
   for (const element of $('panel').querySelectorAll('details[data-manage-key]')) if (openEditors.includes(element.dataset.manageKey)) element.open = true;
 }
-async function refresh() {
+async function refresh(loadDashboard=true) {
   data = await api('desk?day=' + encodeURIComponent($('date').value));
   today(data.today);
   if(tab==='schedule')scheduleData=await api('schedule?day='+encodeURIComponent($('date').value));
+  if(tab==='dashboard'&&session?.role==='admin'){dashboardHistoryStatus='loading';dashboardUpdatedAt=new Date();}
   render();
+  if(loadDashboard&&tab==='dashboard'&&session?.role==='admin')await loadDashboardDetails();
+}
+async function loadDashboardDetails() {
+  if(session?.role!=='admin'||tab!=='dashboard')return;
+  const owner=session,day=$('date').value;
+  dashboardHistoryStatus='loading';dashboardHistory=weekDays(day).map(date=>({day:date,stats:date===day?summarizeDesk(data):null}));render();
+  const dates=weekDays(day).slice(0,6),requests=dates.map(date=>()=>api('desk?day='+encodeURIComponent(date)));
+  requests.push(()=>api('schedule?day='+encodeURIComponent(day)));
+  let results;
+  if(native){results=[];for(const request of requests){if(session!==owner)return;try{results.push({status:'fulfilled',value:await request()});}catch(reason){results.push({status:'rejected',reason});}}}
+  else results=await Promise.allSettled(requests.map(request=>request()));
+  if(session!==owner||tab!=='dashboard'||$('date').value!==day)return;
+  dashboardHistory=dates.map((date,index)=>({day:date,stats:results[index].status==='fulfilled'?summarizeDesk(results[index].value):null}));dashboardHistory.push({day,stats:summarizeDesk(data)});
+  dashboardHistoryStatus=results.slice(0,6).some(result=>result.status==='rejected')?'partial':'ready';
+  dashboardSchedule=results[6].status==='fulfilled'?results[6].value:null;dashboardScheduleUnavailable=results[6].status==='rejected';render();
 }
 async function change(route, payload, label) {
   await api(route,payload);
@@ -379,16 +409,17 @@ async function change(route, payload, label) {
 }
 async function enterWorkspace() {
   $('date').value = $('date').dataset.last = session.today;
-  tab = 'roster';
-  try { await refresh(); }
+  tab = session.role==='admin'?'dashboard':'roster';
+  try { await refresh(false); }
   catch (error) { loggedOut(); throw error; }
   $('login').hidden = true;
   $('desk').hidden = $('logout').hidden = false;
   mountShell($('tabs'), {
     mode:session.role === 'teacher' ? 'teacher' : native ? 'admin-mobile' : 'admin',
     active:tab,
-    onNavigate(screen) { if (busy) return; tab = screen; if(tab==='schedule')task(refresh);else render(); }
+    onNavigate(screen) { if (busy) return; tab = screen; if(['schedule','dashboard'].includes(tab))task(refresh);else render(); }
   });
+  if(session.role==='admin')await loadDashboardDetails();
 }
 $('login-form').addEventListener('submit',event => {
   event.preventDefault();
@@ -415,6 +446,7 @@ $('date').addEventListener('change',() => task(async () => {
 $('search').addEventListener('input',render);
 $('panel').addEventListener('change',event => {
   const target = event.target;
+  if(target.matches('form[data-form="export"] select[name="type"]')){for(const card of $('panel').querySelectorAll('[data-report-choice]'))card.setAttribute('aria-pressed',String(card.dataset.reportChoice===target.value));return;}
   if(target.hasAttribute('data-schedule-control')){changeScheduleEditor(target.form,scheduleData);return;}
   if (target.id === 'activity-choice') {
     activityId = Number(target.value);
@@ -534,6 +566,13 @@ $('panel').addEventListener('submit',event => {
   });
 });
 $('panel').addEventListener('click',event => {
+  const shortcut=event.target.closest('[data-dashboard-go]');
+  if(shortcut&&!busy){$('tabs').querySelector('[data-tab="'+shortcut.dataset.dashboardGo+'"]')?.click();if(shortcut.dataset.dashboardGo==='incidents'){const drawer=$('panel').querySelector('[data-manage-key="record-incident"]');if(drawer)drawer.open=true;}$('panel').querySelector('form[data-form="incident"] select')?.focus();return;}
+  if(event.target.closest('[data-dashboard-refresh]')){task(refresh);return;}
+  const activityCard=event.target.closest('[data-activity-card]');
+  if(activityCard&&!busy){$('activity-choice').value=activityCard.dataset.activityCard;$('activity-choice').dispatchEvent(new Event('change',{bubbles:true}));return;}
+  const reportCard=event.target.closest('[data-report-choice]');
+  if(reportCard&&!busy){const select=reportCard.closest('form').querySelector('select[name="type"]');select.value=reportCard.dataset.reportChoice;select.dispatchEvent(new Event('change',{bubbles:true}));return;}
   const button = event.target.closest('[data-action]');
   if (!button || busy) return;
   const {action,student,id,delta} = button.dataset;
