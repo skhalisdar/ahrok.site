@@ -25,17 +25,21 @@ export function validateSlots(slots) {
 }
 function validDay(day){if(typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(+new Date(day+'T00:00:00Z'))||new Date(day+'T00:00:00Z').toISOString().slice(0,10)!==day)error(400,'Choose a valid schedule date.');return day;}
 
-export function createScheduleStore(db) {
-  let ready;
-  async function ensure(){
-    if(!ready)ready=Promise.resolve().then(()=>db.exec(`CREATE TABLE IF NOT EXISTS program_schedules (
+export const scheduleSchema = `CREATE TABLE IF NOT EXISTS program_schedules (
       id TEXT PRIMARY KEY, group_id INTEGER NOT NULL REFERENCES student_groups(id), payload TEXT NOT NULL,
       version INTEGER NOT NULL, updated_by TEXT NOT NULL REFERENCES users(id), updated_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS program_schedule_history (
       id TEXT PRIMARY KEY, schedule_id TEXT NOT NULL, previous_payload TEXT, new_payload TEXT NOT NULL,
       changed_by TEXT NOT NULL REFERENCES users(id), changed_at TEXT NOT NULL
-    );`)).catch(e=>{ready=undefined;throw e;});
+    );`;
+
+export function createScheduleStore(db) {
+  let ready;
+  // Production PostgreSQL uses a DML-only role; schema setup belongs to the owner migration.
+  async function ensure(){
+    if(db.dialect==='postgres')return;
+    if(!ready)ready=Promise.resolve().then(()=>db.exec(scheduleSchema)).catch(e=>{ready=undefined;throw e;});
     await ready;
   }
   async function read(user,day){

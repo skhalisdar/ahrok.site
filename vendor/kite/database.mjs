@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFile } from 'node:fs/promises';
 import { sqliteSchema } from './schema.mjs';
 import {operationsSchema} from './operations.mjs';
+import {scheduleSchema} from './schedules.mjs';
 
 const identities = ['students','student_groups','activities','staff_log'];
 export function postgresSchema() {
@@ -116,6 +117,7 @@ export async function openDatabase(env=process.env) {
 export async function initDatabase(db) {
   await db.exec(db.dialect === 'postgres' ? postgresSchema() : sqliteSchema);
   await db.exec(operationsSchema);
+  await db.exec(scheduleSchema);
   if(db.dialect==='postgres') await db.exec('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS institution_id TEXT');
   if (db.dialect !== 'postgres') {
     const columns = new Set(db.prepare('PRAGMA table_info(sessions)').all().map(c => c.name));
