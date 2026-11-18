@@ -1,6 +1,6 @@
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
-import {programPanel,dashboardPanel,summarizeDesk,weekDays,uiIcon,richEmpty} from './program-panels.mjs';
+import {programPanel,dashboardPanel,summarizeDesk,weekDays,uiIcon,richEmpty,teacherShiftPanel} from './program-panels.mjs';
 import {schedulePanel,scheduleRow,schedulePayload,changeScheduleEditor,captureScheduleDraft,resetScheduleDrafts,updateScheduleNow} from './schedule-view.mjs';
 import {parseStudentCSV, studentKey, MAX_CSV_BYTES} from './student-csv.mjs';
 
@@ -362,6 +362,7 @@ function render() {
   const recent = new Map();
   for (const event of data.staff) if (!recent.has(event.teacher)) recent.set(event.teacher,event.signed_in);
   const ownShift = Boolean(recent.get(session.id));
+  $('logout').textContent = admin ? 'Log out' : 'Log out of app';
   $('metrics').innerHTML = metric('Students present',active.filter(s => s.attendance === 'Present').length + ' / ' + active.length,
     active.filter(s => s.attendance === 'Tardy').length + ' tardy · ' + active.filter(s => s.attendance === 'Absent').length + ' absent') +
     metric('Homework complete',active.filter(s => s.homework === 'Complete').length + ' / ' + active.length,
@@ -378,6 +379,7 @@ function render() {
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
+  $('panel').insertAdjacentHTML('afterbegin',teacherShiftPanel({role:session.role,day:$('date').value,today:data.today,events:data.staff,id:session.id,e:escapeHTML}));
   for (const element of $('panel').querySelectorAll('details[data-manage-key]')) if (openEditors.includes(element.dataset.manageKey)) element.open = true;
 }
 async function refresh(loadDashboard=true) {
@@ -566,6 +568,7 @@ $('panel').addEventListener('submit',event => {
   });
 });
 $('panel').addEventListener('click',event => {
+  if(event.target.closest('[data-shift-today]')&&!busy){$('date').value=data.today;$('date').dispatchEvent(new Event('change',{bubbles:true}));return;}
   const shortcut=event.target.closest('[data-dashboard-go]');
   if(shortcut&&!busy){$('tabs').querySelector('[data-tab="'+shortcut.dataset.dashboardGo+'"]')?.click();if(shortcut.dataset.dashboardGo==='incidents'){const drawer=$('panel').querySelector('[data-manage-key="record-incident"]');if(drawer)drawer.open=true;}$('panel').querySelector('form[data-form="incident"] select')?.focus();return;}
   if(event.target.closest('[data-dashboard-refresh]')){task(refresh);return;}
@@ -638,6 +641,7 @@ async function restoreAdminSession() {
   });
 }
 if (!native) await restoreAdminSession();
+
 
 
 

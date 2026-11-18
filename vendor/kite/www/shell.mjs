@@ -15,7 +15,7 @@ export function mountShell(root, { mode, active, onNavigate }) {
   root.dataset.mode = mode;
   root.innerHTML = items.map(([id,label,icon]) => `<button type="button" data-tab="${id}"
     ${active === id ? 'aria-current="page"' : ''}>
-    <svg viewBox="0 0 24 24" aria-hidden="true">${icons[icon]}</svg><span>${label}</span></button>`).join('');
+    <svg viewBox="0 0 24 24" aria-hidden="true">${icons[icon]}</svg><span>${id==='staff'&&mode==='teacher'?'My Shift':label}</span></button>`).join('');
   root.onclick = event => {
     const button = event.target.closest('button[data-tab]');
     if (!button || !root.contains(button)) return;
@@ -24,3 +24,4 @@ export function mountShell(root, { mode, active, onNavigate }) {
     onNavigate(button.dataset.tab);
   };
 }
+

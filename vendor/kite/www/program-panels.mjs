@@ -1,4 +1,10 @@
 // These views use only backend-authorized data. Permissions are enforced again by the API.
+export function teacherShiftPanel({role,day,today,events,id,e}) {
+  if(role!=='teacher')return '';
+  const latest=events.find(event=>event.teacher===id),onShift=Boolean(latest?.signed_in),current=day===today;
+  const status=onShift?'On shift':'Off shift';
+  return `<section class="teacher-shift-bar" aria-label="My shift"><div class="teacher-shift-copy"><span class="teacher-shift-icon" aria-hidden="true">${uiIcon('staff')}</span><div><strong>My shift <span class="status-pill ${onShift?'status-active':'status-neutral'}">${status}</span></strong><p>${current?'Use the button to record your shift. Logging out of the app does not end your shift.':`Viewing ${e(day)}. Switch to today to record your shift.`}</p>${latest?`<small>Last ${latest.signed_in?'sign-in':'sign-out'}: <time datetime="${e(latest.at)}">${e(new Date(latest.at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}))} ET</time></small>`:''}</div></div><div class="teacher-shift-actions">${current?'':`<button type="button" data-shift-today>Go to today</button>`}<button type="button" class="primary" data-action="shift" data-in="${onShift?'0':'1'}" ${current?'':'disabled'}>${onShift?'Sign Out of Shift':'Sign In to Shift'}</button></div></section>`;
+}
 export function programPanel(tab,{data,admin,day,escapeHTML:e,heading,renderGroups,query='',schedule,schedulePanel,today}) {
   query=query.trim().toLowerCase();
   if(tab==='schedule')return schedulePanel({schedule,admin,today,e,heading});
@@ -98,3 +104,4 @@ export function dashboardPanel({data,day,history=[],historyStatus='idle',schedul
       <div class="pulse-row"><span class="pulse-icon">${uiIcon('incident')}</span><div><strong>${stats.openIncidents} unresolved incident${stats.openIncidents===1?'':'s'}</strong><p class="muted">${stats.openIncidents?'Open Incidents to review and resolve reports.':'No open reports need attention for this date.'}</p></div></div></section>
     <section class="card dashboard-actions"><div class="section-heading"><div><h3>Quick actions</h3><p>Pick up where your team needs you.</p></div></div>${[['roster','Mark attendance','Review attendance and homework','attendance'],['incidents','Log incident','Record or review a report','incident'],['pickup','Verify pickup','Check authorized contacts','shield']].map(([target,label,detail,icon])=>`<button type="button" class="quick-action" data-dashboard-go="${target}"><span class="quick-icon">${uiIcon(icon)}</span><span><strong>${label}</strong><small>${detail}</small></span>${uiIcon('arrow')}</button>`).join('')}</section></div></div>`;
 }
+

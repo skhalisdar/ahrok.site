@@ -25,6 +25,13 @@ test('teacher mobile sessions can read and modify only currently assigned groups
  try{
   db.exec("INSERT INTO users(id,role,password) SELECT 'teacher','teacher',password FROM users WHERE id='admin'; INSERT INTO student_groups VALUES(1,'First group','first'),(2,'Second group','second'); INSERT INTO students(id,name,grade,track) VALUES(1,'First Student','1',''),(2,'Second Student','2',''),(3,'Unassigned Student','3',''); INSERT INTO student_group_memberships VALUES(1,1),(2,2); INSERT INTO teacher_group_assignments VALUES(1,'teacher'); INSERT INTO activities(id,name,name_key,teacher_id,all_groups) VALUES(1,'Coding','coding','teacher',1);");
   const login=await ok(await api('login',{id:'teacher',password}));token=login.token;const day=login.today;
+  await ok(await api('shift',{day,signedIn:true}));
+  await ok(await api('shift',{day,signedIn:true}));
+  assert.equal(db.prepare('SELECT count(*) AS n FROM staff_log WHERE teacher=?').get('teacher').n,1,'repeated sign-in does not duplicate shifts');
+  let shiftDesk=await ok(await api('desk?day='+day));assert.equal(shiftDesk.staff[0].signed_in,1);
+  await ok(await api('shift',{day,signedIn:false}));shiftDesk=await ok(await api('desk?day='+day));assert.equal(shiftDesk.staff[0].signed_in,0);
+  assert.equal((await api('shift',{day:'2000-01-01',signedIn:true})).status,400);
+  assert.equal((await api('shift',{day,signedIn:true},false)).status,403);
   assert.equal((await api('desk?day='+day,undefined,false)).status,403);
   for(const student of [1,2]){
    db.prepare('INSERT INTO pickup_contacts(id,student,name,relationship,created_by,at) VALUES(?,?,?,?,?,?)').run('contact-'+student,student,'Guardian '+student,'Parent','admin',new Date().toISOString());
@@ -57,3 +64,4 @@ test('teacher mobile sessions can read and modify only currently assigned groups
   desk=await ok(await api('desk?day='+day));assert.equal(desk.students.length,3);assert.equal(desk.groups.length,2);assert.equal(desk.pickups.length,2);
  }finally{await app.close();}
 });
+
