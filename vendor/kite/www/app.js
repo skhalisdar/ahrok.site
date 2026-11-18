@@ -15,6 +15,8 @@ let expiryTimer;
 let scheduleData=null;
 let dashboardHistory=[],dashboardHistoryStatus="idle",dashboardSchedule=null,dashboardScheduleUnavailable=false,dashboardUpdatedAt=null;
 setInterval(()=>{if(session&&tab==='schedule'&&!busy)updateScheduleNow(scheduleData,$('panel'));},30000);
+// Reuse the existing serialized refresh workflow, only on today's visible admin Dashboard.
+setInterval(()=>{if(session?.role==='admin'&&tab==='dashboard'&&!busy&&!document.hidden&&$('date').value===data?.today)task(refresh);},60000);
 let studentImport = null;
 function expireMobileSession() {
   if(native&&session?.expiresAt<=Date.now()) {
