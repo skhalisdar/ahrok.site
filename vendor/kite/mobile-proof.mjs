@@ -36,7 +36,10 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
     const certificates=env.KITE_PLAY_CERTIFICATE_SHA256.split(',').map(s=>s.trim().replace(/:/g,'').toLowerCase());
     if(!details || details.requestPackageName!==env.KITE_ANDROID_PACKAGE || details.requestHash!==requestHash ||
       !Number.isFinite(Number(details.timestampMillis)) || Math.abs(now()-Number(details.timestampMillis))>120000)deny('PLAY_REQUEST_MISMATCH');
-    if(app?.appRecognitionVerdict!=='PLAY_RECOGNIZED' || app.packageName!==env.KITE_ANDROID_PACKAGE)deny('PLAY_APP_UNRECOGNIZED');
+    if(app?.appRecognitionVerdict==='UNEVALUATED')deny('PLAY_APP_UNEVALUATED');
+    if(app?.appRecognitionVerdict==='UNRECOGNIZED_VERSION')deny('PLAY_UNRECOGNIZED_VERSION');
+    if(app?.appRecognitionVerdict!=='PLAY_RECOGNIZED')deny('PLAY_APP_VERDICT_MISSING');
+    if(app.packageName!==env.KITE_ANDROID_PACKAGE)deny('PLAY_PACKAGE_MISMATCH');
     if(!app.certificateSha256Digest?.some(cert=>certificates.includes(Buffer.from(cert,'base64url').toString('hex'))))deny('PLAY_CERTIFICATE_MISMATCH');
     if(v.accountDetails?.appLicensingVerdict!=='LICENSED')deny('PLAY_NOT_LICENSED');
     if(!v.deviceIntegrity?.deviceRecognitionVerdict?.includes('MEETS_DEVICE_INTEGRITY'))deny('PLAY_DEVICE_INTEGRITY');
@@ -127,7 +130,7 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
       return c.device_id;
     }catch(error){
       // Fixed internal codes only: never return credentials, tokens, payloads or provider bodies.
-      const reasons=new Set(['PLAY_API_400','PLAY_API_401','PLAY_API_403','PLAY_API_429','PLAY_API_UNAVAILABLE','PLAY_REQUEST_MISMATCH','PLAY_APP_UNRECOGNIZED','PLAY_CERTIFICATE_MISMATCH','PLAY_NOT_LICENSED','PLAY_DEVICE_INTEGRITY']);
+      const reasons=new Set(['PLAY_API_400','PLAY_API_401','PLAY_API_403','PLAY_API_429','PLAY_API_UNAVAILABLE','PLAY_REQUEST_MISMATCH','PLAY_APP_UNRECOGNIZED','PLAY_APP_UNEVALUATED','PLAY_UNRECOGNIZED_VERSION','PLAY_APP_VERDICT_MISSING','PLAY_PACKAGE_MISMATCH','PLAY_CERTIFICATE_MISMATCH','PLAY_NOT_LICENSED','PLAY_DEVICE_INTEGRITY']);
       req.kiteVerificationCode=reasons.has(error.verificationReason)?error.verificationReason:stage;
       onReject(error);return null;
     }
