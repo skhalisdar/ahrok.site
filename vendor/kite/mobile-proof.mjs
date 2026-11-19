@@ -4,7 +4,7 @@ import cbor from 'cbor';
 import {GoogleAuth,JWT} from 'google-auth-library';
 
 export const sha256=value=>createHash('sha256').update(value).digest('hex');
-const deny=()=>{throw Object.assign(new Error('Mobile device verification failed.'),{status:403,code:'APP_PROOF_REQUIRED'});};
+const deny=(reason='PROOF_INVALID')=>{throw Object.assign(new Error('Mobile device verification failed.'),{status:403,code:'APP_PROOF_REQUIRED',verificationReason:reason});};
 function decode(value,max=50000) {
   if(typeof value!=='string'||value.length>max) return deny();
   return Buffer.from(value,'base64');
@@ -28,16 +28,18 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
       google=new GoogleAuth({authClient:new JWT({email:credentials.client_email,key:credentials.private_key,scopes:['https://www.googleapis.com/auth/playintegrity']})});
     }
     const client=await google.getClient();
-    const {data}=await client.request({url:`https://playintegrity.googleapis.com/v1/${encodeURIComponent(env.KITE_ANDROID_PACKAGE)}:decodeIntegrityToken`,method:'POST',data:{integrity_token:token},timeout:10000});
-    const v=data.tokenPayloadExternal;
+    let response;
+    try { response=await client.request({url:`https://playintegrity.googleapis.com/v1/${encodeURIComponent(env.KITE_ANDROID_PACKAGE)}:decodeIntegrityToken`,method:'POST',data:{integrity_token:token},timeout:10000}); }
+    catch(error) { const status=Number(error.response?.status); deny([400,401,403,429].includes(status)?'PLAY_API_'+status:'PLAY_API_UNAVAILABLE'); }
+    const v=response.data.tokenPayloadExternal;
     const details=v?.requestDetails, app=v?.appIntegrity;
     const certificates=env.KITE_PLAY_CERTIFICATE_SHA256.split(',').map(s=>s.trim().replace(/:/g,'').toLowerCase());
     if(!details || details.requestPackageName!==env.KITE_ANDROID_PACKAGE || details.requestHash!==requestHash ||
-      !Number.isFinite(Number(details.timestampMillis)) || Math.abs(now()-Number(details.timestampMillis))>120000 ||
-      app?.appRecognitionVerdict!=='PLAY_RECOGNIZED' || app.packageName!==env.KITE_ANDROID_PACKAGE ||
-      !app.certificateSha256Digest?.some(cert=>certificates.includes(Buffer.from(cert,'base64url').toString('hex'))) ||
-      v.accountDetails?.appLicensingVerdict!=='LICENSED' ||
-      !v.deviceIntegrity?.deviceRecognitionVerdict?.includes('MEETS_DEVICE_INTEGRITY'))deny();
+      !Number.isFinite(Number(details.timestampMillis)) || Math.abs(now()-Number(details.timestampMillis))>120000)deny('PLAY_REQUEST_MISMATCH');
+    if(app?.appRecognitionVerdict!=='PLAY_RECOGNIZED' || app.packageName!==env.KITE_ANDROID_PACKAGE)deny('PLAY_APP_UNRECOGNIZED');
+    if(!app.certificateSha256Digest?.some(cert=>certificates.includes(Buffer.from(cert,'base64url').toString('hex'))))deny('PLAY_CERTIFICATE_MISMATCH');
+    if(v.accountDetails?.appLicensingVerdict!=='LICENSED')deny('PLAY_NOT_LICENSED');
+    if(!v.deviceIntegrity?.deviceRecognitionVerdict?.includes('MEETS_DEVICE_INTEGRITY'))deny('PLAY_DEVICE_INTEGRITY');
   }
   async function challenge(input,req) {
     if(!['ios','android'].includes(input.platform)||!['login','request'].includes(input.purpose) ||
@@ -64,6 +66,7 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
     return {id,payload,expiresAt:expires,registered};
   }
   async function consume(req,accountId,purpose,sessionHash='',expectedDevice) {
+    let stage='PROOF_CHALLENGE';
     try {
       const raw=req.headers['x-kite-proof'];
       if(typeof raw!=='string'||raw.length>80000)deny();
@@ -75,6 +78,7 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
         expectedDevice&&expectedDevice!==c.device_id)deny();
       const device=await query('SELECT * FROM mobile_devices WHERE id=? AND institution_id=?').get(c.device_id,institutionId);
       if(device&&(!device.active||device.platform!==c.platform))deny();
+      stage='DEVICE_PROOF';
       let publicKey=device?.public_key,signCount=device?.sign_count??0;
       if(c.platform==='ios') {
         if(!appleConfigured())deny();
@@ -104,10 +108,12 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
         const key=createPublicKey({key:der,type:'spki',format:'der'});
         if(key.asymmetricKeyType!=='ec'||key.asymmetricKeyDetails?.namedCurve!=='prime256v1')deny();
         if(!verify('sha256',Buffer.from(c.payload),key,decode(proof.signature,1000)))deny();
+        stage='PLAY_CREDENTIALS';
         await playVerdict(proof.integrityToken,createHash('sha256').update(c.payload).digest('base64url'));
         publicKey=key.export({type:'spki',format:'pem'});
         signCount++;
       }
+      stage='DEVICE_REGISTRATION';
       await db.exec('BEGIN IMMEDIATE');
       try {
         const taken=await query('UPDATE mobile_challenges SET used=1 WHERE id=? AND used=0 AND expires_at>?').run(c.id,now());
@@ -119,7 +125,12 @@ export function createMobileProof({db,institutionId,env,now=Date.now,onReject=()
         await db.exec('COMMIT');
       } catch(error){await db.exec('ROLLBACK');throw error;}
       return c.device_id;
-    }catch(error){onReject(error);return null;}
+    }catch(error){
+      // Fixed internal codes only: never return credentials, tokens, payloads or provider bodies.
+      const reasons=new Set(['PLAY_API_400','PLAY_API_401','PLAY_API_403','PLAY_API_429','PLAY_API_UNAVAILABLE','PLAY_REQUEST_MISMATCH','PLAY_APP_UNRECOGNIZED','PLAY_CERTIFICATE_MISMATCH','PLAY_NOT_LICENSED','PLAY_DEVICE_INTEGRITY']);
+      req.kiteVerificationCode=reasons.has(error.verificationReason)?error.verificationReason:stage;
+      onReject(error);return null;
+    }
   }
   return {challenge,
     verifyLoginAndConsume:(req,account)=>consume(req,account.id,'login'),

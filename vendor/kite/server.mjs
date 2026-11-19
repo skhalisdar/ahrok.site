@@ -149,7 +149,7 @@ const authMessages = {
   USE_KITE_MOBILE:'Teacher accounts sign in through the Kite iOS or Android app.',
   SESSION_REQUIRED:'Sign in to continue.',
   ORIGIN_FORBIDDEN:'Open Kite at the configured administrator address.',
-  APP_PROOF_REQUIRED:'Mobile app verification is not available on this server.'
+  APP_PROOF_REQUIRED:'Mobile app verification failed.'
 };
 
 async function requireStudentAccess(user,student) {
@@ -591,7 +591,9 @@ const handler = async (req,res) => {
   } catch (error) {
     if(error.code==='23505'||error.code==='SQLITE_CONSTRAINT_UNIQUE'){error.status=409;error.message='This record already exists. Refresh and try again.';}
     if (!error.status) console.error(error);
-    send(error.status ?? 500, {error:authMessages[error.code] ?? (error.status ? error.message : 'The server could not complete the request.')});
+    const verificationCode=error.code==='APP_PROOF_REQUIRED'?req.kiteVerificationCode:undefined;
+    const message=authMessages[error.code] ?? (error.status ? error.message : 'The server could not complete the request.');
+    send(error.status ?? 500, {error:verificationCode?message+' Code: '+verificationCode+'.':message});
   }
 };
 const server = createServer({maxHeaderSize:65536},handler);
