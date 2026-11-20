@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ['pg', 'node-app-attest', 'cbor', 'google-auth-library', 'pdfkit'],
   outputFileTracingIncludes: {
+    '/nycmccompass/[[...path]]': ['./vendor/compass/www/**/*'],
     '/kite/[[...path]]': ['./vendor/kite/www/**/*', './vendor/kite/fonts/**/*', './vendor/kite/report-assets/**/*'],
     '/api/mobile/[...path]': ['./vendor/kite/www/**/*', './vendor/kite/fonts/**/*', './vendor/kite/report-assets/**/*'],
   },
