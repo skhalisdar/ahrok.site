@@ -2,6 +2,7 @@ import {randomBytes,randomInt,createHash,scrypt as scryptCallback,timingSafeEqua
 import {promisify} from 'node:util';
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {openDatabase} from './database.mjs';
 const scrypt=promisify(scryptCallback), BASE='/nycmccompass', COOKIE='__Host-compass-student', INSTRUCTOR_COOKIE='__Host-compass-instructor';
 const hash=x=>createHash('sha256').update(x).digest('hex');
@@ -20,7 +21,7 @@ export function projectURL(v){try{const u=new URL(v);return ['http:','https:'].i
 async function pinHash(pin){const salt=randomBytes(16).toString('hex');return salt+':'+Buffer.from(await scrypt(pin,salt,32)).toString('hex');}
 async function verifyPin(pin,stored){const [salt,expected]=stored.split(':');const actual=await scrypt(pin,salt,32);return expected.length===64&&timingSafeEqual(Buffer.from(expected,'hex'),actual);}
 const text=(v,max)=>{if(typeof v!=='string'||v.length>max)fail(400,'Invalid text.');return v.trim();};
-export function createCompassHandler({database,env=process.env,assetRoot=resolve(process.cwd(),'www'),now=Date.now,onError=()=>console.error('COMPASS request failed')}={}){
+export function createCompassHandler({database,env=process.env,assetRoot=fileURLToPath(new URL('./www/',import.meta.url)),now=Date.now,onError=()=>console.error('COMPASS request failed')}={}){
  let opened,queue=Promise.resolve();
  const serial=fn=>{const next=queue.then(fn,fn);queue=next.catch(()=>{});return next;};
  async function db(){if(!opened)opened=(async()=>{const connection=database||await openDatabase(env);const identity=await connection.prepare('SELECT institution_id FROM compass_deployment_identity WHERE id=1').get();if(identity?.institution_id!=='nycmc-compass-independent')throw Error('Wrong institution database');if(connection.dialect==='postgres'){
