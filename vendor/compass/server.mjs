@@ -21,7 +21,13 @@ const text=(v,max)=>{if(typeof v!=='string'||v.length>max)fail(400,'Invalid text
 export function createCompassHandler({database,env=process.env,assetRoot=resolve(process.cwd(),'vendor/compass/www'),now=Date.now,onError=()=>console.error('COMPASS request failed')}={}){
  let opened,queue=Promise.resolve();
  const serial=fn=>{const next=queue.then(fn,fn);queue=next.catch(()=>{});return next;};
- async function db(){if(!opened)opened=(async()=>{const connection=database||await openDatabase(env);const identity=await connection.prepare('SELECT institution_id FROM deployment_identity WHERE id=1').get();if(identity?.institution_id!=='nycmc-compass')throw Error('Wrong institution database');await connection.exec(schema);return connection;})().catch(e=>{opened=undefined;throw e});return opened;}
+ async function db(){if(!opened)opened=(async()=>{const connection=database||await openDatabase(env);const identity=await connection.prepare('SELECT institution_id FROM deployment_identity WHERE id=1').get();if(identity?.institution_id!=='nycmc-compass')throw Error('Wrong institution database');if(connection.dialect==='postgres'){
+ // PostgreSQL uses the existing DML-only runtime role. Schema changes run
+ // separately as the database owner; never grant the runtime CREATE access.
+ for(const table of ['compass_students','compass_sessions','compass_throttle']){
+  await connection.prepare(`SELECT 1 FROM ${table} LIMIT 0`).all();
+ }
+ }else await connection.exec(schema);return connection;})().catch(e=>{opened=undefined;throw e});return opened;}
  const origin=env.COMPASS_ORIGIN||env.KITE_ADMIN_ORIGIN||'https://ahrok.site';
  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
  let calendar;
