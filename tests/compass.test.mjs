@@ -46,3 +46,11 @@ test('roster import validates atomically and skips duplicates',async()=>{
  let r=await (await call('import',{students:[{name:'Test',grade:6}]},admin)).json();assert.equal(r.created.length,1);
  r=await (await call('import',{students:[{name:'Test',grade:6}]},admin)).json();assert.equal(r.created.length,0);database.close();
 });
+test('PostgreSQL startup checks existing tables without running DDL',async()=>{
+ const seen=[];
+ const database={dialect:'postgres',exec(){throw Error('Runtime must not run DDL')},prepare(sql){seen.push(sql);return {get:async()=>sql.includes('deployment_identity')?{institution_id:'nycmc-compass'}:sql.includes('JOIN sessions')?{id:'admin'}:undefined,all:async()=>[]};}};
+ const handler=createCompassHandler({database,onError:()=>{}});
+ const response=await handler(new Request('https://ahrok.site/nycmccompass/api/state',{headers:{cookie:'__Host-kite-admin='+'a'.repeat(64)}}));
+ assert.equal(response.status,200);
+ for(const table of ['compass_students','compass_sessions','compass_throttle'])assert.ok(seen.includes(`SELECT 1 FROM ${table} LIMIT 0`));
+});
