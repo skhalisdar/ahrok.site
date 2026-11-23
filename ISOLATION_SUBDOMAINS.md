@@ -7,6 +7,7 @@
 - Kite: `https://kite.ahrok.site/kite/`, project `kite`, source `skhalisdar/Kite`. This first stage deliberately retains `/kite/` as the app's internal asset/API base path; it can gain a subdomain-root alias later.
 - COMPASS: `https://compass.ahrok.site/nycmccompass`, project `nycmc-compass`, source `skhalisdar/nycmc-compass`. This first stage retains its tested internal routes.
 - After readiness, old URLs `https://ahrok.site/kite` and `https://ahrok.site/nycmccompass` redirect temporarily (307) to these independent browser origins.
+- Redirects apply to the **landing URLs only**. Deep legacy routes including POST endpoints must be explicitly retired/rejected, not 307-redirected across different browser origins; these currently remain live in source pending approved removal.
 - Root may publish general links to the other apps, but it must not load their JS, backend, CSS or auth credentials.
 
 ## This preparation branch
