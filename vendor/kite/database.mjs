@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { sqliteSchema } from './schema.mjs';
 import {operationsSchema} from './operations.mjs';
 import {scheduleSchema} from './schedules.mjs';
+import {messagingSchema} from './messaging.mjs';
 
 const identities = ['students','student_groups','activities','staff_log'];
 export function postgresSchema() {
@@ -22,12 +23,12 @@ export function postgresSQL(statement) {
   if (statement.includes('INSERT INTO activity_progress')) statement = statement.replace(/(?<![.\w])level \+/g, 'activity_progress.level +');
   // App scalar clamps have a numeric first argument. Preserve SQL aggregates
   // such as max(id)/min(id), which have different semantics in PostgreSQL.
-  return statement.replace(/'(?:''|[^'])*'|\?|\bAS (accountId|expiresAt|deviceId)\b|\bmax\((?=\s*-?\d+\s*,)|\bmin\((?=\s*-?\d+\s*,)|\bIS NOT \?|\(\? OR/g,
+  return statement.replace(/'(?:''|[^'])*'|\?|\bAS (accountId|expiresAt|deviceId)\b|\bmax\((?=\s*-?\d+\s*,)|\bmin\((?=\s*-?\d+\s*,)|\bIS NOT \?|\(\? (?:OR|AND)/g,
     match => {
       if (match.startsWith("'")) return match;
       if (match === '?') return '$' + ++i;
       if (match === 'IS NOT ?') return 'IS DISTINCT FROM $' + ++i;
-      if (match === '(? OR') return `($${++i}::integer <> 0 OR`;
+      if (match === '(? OR' || match === '(? AND') return `($${++i}::integer <> 0 ${match.slice(3)}`;
       if (match.startsWith('AS ')) return `AS "${match.slice(3)}"`;
       return match === 'max(' ? 'greatest(' : 'least(';
     }).replace(/WHERE (\$\d+) OR/g, 'WHERE $1::integer <> 0 OR')
@@ -118,6 +119,7 @@ export async function initDatabase(db) {
   await db.exec(db.dialect === 'postgres' ? postgresSchema() : sqliteSchema);
   await db.exec(operationsSchema);
   await db.exec(scheduleSchema);
+  await db.exec(messagingSchema);
   if(db.dialect==='postgres') await db.exec('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS institution_id TEXT');
   if (db.dialect !== 'postgres') {
     const columns = new Set(db.prepare('PRAGMA table_info(sessions)').all().map(c => c.name));
@@ -126,4 +128,5 @@ export async function initDatabase(db) {
     }
   }
 }
+
 

@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "kite-web-integration-20261116": false
+      "kite-web-integration-20261116": false,
+      "kite-single-origin-consolidation-20261122": false
     }
   }
 }

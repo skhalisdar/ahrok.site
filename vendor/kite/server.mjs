@@ -9,6 +9,7 @@ import {resolve} from 'node:path';
 import {bindInstitution,csv} from './operations.mjs';
 import {createMobileProof,sha256} from './mobile-proof.mjs';
 import {randomUUID} from 'node:crypto';
+import {createMessaging} from './messaging.mjs';
 import {createScheduleStore} from './schedules.mjs';
 import {reportPDF} from './pdf-report.mjs';
 import {importStudents} from './www/student-import.mjs';
@@ -29,6 +30,7 @@ async function workspaceAccess() {
 
 const sql = statement => db.prepare(statement);
 const schedules = createScheduleStore(db);
+const messaging=createMessaging(db);
 const scryptOptions = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 function passwordHash(password) {
   const salt = randomBytes(16).toString('hex');
@@ -107,6 +109,7 @@ const safeHeaders = {'Cache-Control':'no-store','X-Content-Type-Options':'nosnif
 const shell = await readFile(resolve(process.cwd(), 'vendor/kite/www/shell.mjs'));
 const scheduleClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/schedule-view.mjs'));
 const logo = await readFile(resolve(process.cwd(), 'vendor/kite/www/kite.svg'));
+const messagesClient=await readFile(resolve(process.cwd(), 'vendor/kite/www/messages.mjs'));
 const studentImportClient = await readFile(resolve(process.cwd(), 'vendor/kite/www/student-csv.mjs'));
 const port = Number(env.PORT ?? 4173);
 const adminOrigin = env.KITE_ADMIN_ORIGIN ?? 'http://127.0.0.1:' + port;
@@ -272,6 +275,8 @@ async function api(req, url, audience, headers) {
   const verified = await auth.requireSession(audience, req);
   const user = {id:verified.accountId,role:verified.role,tokenHash:verified.tokenDigest};
   const admin = user.role === 'admin';
+  if(route==='GET /api/messages')return messaging.list(user,Number(url.searchParams.get('group')));
+  if(route==='POST /api/group-message'){await rateLimit('message:'+user.id,60);return messaging.send(user,input);}
   if (route === 'POST /api/logout') {
     (await sql('DELETE FROM sessions WHERE token = ?').run(user.tokenHash));
     if (audience === 'admin-web') headers['Set-Cookie'] = adminCookie('0'.repeat(64), 0);
@@ -571,6 +576,7 @@ const handler = async (req,res) => {
     }
     const asset = url.pathname.replace(/^\/kite(?=\/)/, '');
     if (req.method === 'GET' && asset === '/') return send(200,page,'text/html; charset=utf-8');
+    if (req.method === 'GET' && asset === '/messages.mjs') return send(200,messagesClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/app.js') return send(200,client,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/mobile-auth.mjs') return send(200,mobileClient,'text/javascript; charset=utf-8');
     if (req.method === 'GET' && asset === '/program-panels.mjs') return send(200,programClient,'text/javascript; charset=utf-8');
@@ -612,4 +618,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     setTimeout(() => process.exit(1),25000).unref();
   });
 }
+
 

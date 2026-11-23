@@ -1,3 +1,4 @@
+import {messagesPanel} from './messages.mjs';
 import { mountShell } from './shell.mjs';
 import {mobileHeaders,mobileOrigin,apiResult} from './mobile-auth.mjs';
 import {programPanel,dashboardPanel,summarizeDesk,weekDays,uiIcon,richEmpty,teacherShiftPanel} from './program-panels.mjs';
@@ -30,6 +31,7 @@ function setSession(value) {
   if(native){window.clearTimeout(expiryTimer);expiryTimer=window.setTimeout(expireMobileSession,Math.max(0,value.expiresAt-Date.now()));}
 }
 if(native)document.addEventListener('visibilitychange',expireMobileSession);
+let messageGroup=null,messageRows=[];
 let activityId = null, activityGroup = '';
 function message(text, error = false) {
   $('message').textContent = text;
@@ -48,6 +50,7 @@ function loggedOut() {
   studentImport = null;
   window.clearTimeout(expiryTimer);
   session = data = null;
+  messageGroup=null;messageRows=[];
   activityId = null;
   activityGroup = '';
   $('desk').hidden = $('logout').hidden = true;
@@ -356,7 +359,7 @@ function render() {
   const admin = session.role === 'admin';
   $('panel').dataset.module=tab;
   $('metrics').hidden=true;
-  $('date-wrap').hidden=['admin','reports','courses'].includes(tab);
+  $('date-wrap').hidden=['admin','reports','courses','messages'].includes(tab);
   const groupNames = admin || !data.groups.length ? '' : ' · Groups: ' + data.groups.map(g => g.name).join(', ');
   const institution = data.workspace ? data.workspace.name + ' · ' : '';
   $('identity').textContent = institution + (admin ? 'Administrator' : 'Teacher') + ' · ' + session.id + groupNames;
@@ -377,7 +380,7 @@ function render() {
     (s.name + ' grade ' + s.grade + ' ' + (s.group_name ?? '')).toLowerCase().includes(query));
   for (const item of $('tabs').querySelectorAll('button')) item.dataset.tab === tab ? item.setAttribute('aria-current','page') : item.removeAttribute('aria-current');
   const openEditors = [...$('panel').querySelectorAll('details[data-manage-key][open]')].map(element => element.dataset.manageKey);
-  $('panel').innerHTML = (tab==='dashboard'&&admin ? dashboardPanel({data,day:$('date').value,history:dashboardHistory,historyStatus:dashboardHistoryStatus,schedule:dashboardSchedule,scheduleUnavailable:dashboardScheduleUnavailable,updatedAt:dashboardUpdatedAt,e:escapeHTML,heading}) : null) ?? programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query,schedule:scheduleData,schedulePanel,today:data.today}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
+  $('panel').innerHTML = (tab==='messages'?messagesPanel({groups:data.groups,selected:messageGroup,messages:messageRows,e:escapeHTML,heading}):null) ?? (tab==='dashboard'&&admin ? dashboardPanel({data,day:$('date').value,history:dashboardHistory,historyStatus:dashboardHistoryStatus,schedule:dashboardSchedule,scheduleUnavailable:dashboardScheduleUnavailable,updatedAt:dashboardUpdatedAt,e:escapeHTML,heading}) : null) ?? programPanel(tab,{data,admin,day:$('date').value,escapeHTML,heading,renderGroups:groupedStudentSections,query,schedule:scheduleData,schedulePanel,today:data.today}) ?? (tab === 'admin' ? adminPanel() : tab === 'staff' ? staff(admin,ownShift) :
     tab === 'activities' ? activityPanel(admin,query) :
     (tab === 'roster' ? roster(students,admin) : courses(students)) +
       (!students.length ? '<p class="empty">No students match this view.</p>' : ''));
@@ -387,6 +390,10 @@ function render() {
 async function refresh(loadDashboard=true) {
   data = await api('desk?day=' + encodeURIComponent($('date').value));
   today(data.today);
+  if(tab==='messages'){
+    if(!data.groups.some(g=>g.id===messageGroup))messageGroup=data.groups[0]?.id??null;
+    messageRows=messageGroup?(await api('messages?group='+messageGroup)).messages:[];
+  }
   if(tab==='schedule')scheduleData=await api('schedule?day='+encodeURIComponent($('date').value));
   if(tab==='dashboard'&&session?.role==='admin'){dashboardHistoryStatus='loading';dashboardUpdatedAt=new Date();}
   render();
@@ -421,7 +428,7 @@ async function enterWorkspace() {
   mountShell($('tabs'), {
     mode:session.role === 'teacher' ? 'teacher' : native ? 'admin-mobile' : 'admin',
     active:tab,
-    onNavigate(screen) { if (busy) return; tab = screen; if(['schedule','dashboard'].includes(tab))task(refresh);else render(); }
+    onNavigate(screen) { if (busy) return; tab = screen; if(['schedule','dashboard','messages'].includes(tab))task(refresh);else render(); }
   });
   if(session.role==='admin')await loadDashboardDetails();
 }
@@ -450,6 +457,7 @@ $('date').addEventListener('change',() => task(async () => {
 $('search').addEventListener('input',render);
 $('panel').addEventListener('change',event => {
   const target = event.target;
+  if(target.id==='message-group'){messageGroup=Number(target.value);task(refresh);return;}
   if(target.matches('form[data-form="export"] select[name="type"]')){for(const card of $('panel').querySelectorAll('[data-report-choice]'))card.setAttribute('aria-pressed',String(card.dataset.reportChoice===target.value));return;}
   if(target.hasAttribute('data-schedule-control')){changeScheduleEditor(target.form,scheduleData);return;}
   if (target.id === 'activity-choice') {
@@ -546,6 +554,7 @@ $('panel').addEventListener('submit',event => {
       link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);message(payload.format.toUpperCase()+' downloaded');
     });return;
   }
+  if(route==='group-message')payload.group=Number(payload.group);
   if(['incident','pickup','pickup-contact'].includes(route))payload.student=Number(payload.student);
   if(['incident','pickup'].includes(route))payload.day=$('date').value;
   if(route==='pickup')payload.identityChecked=form.has('identityChecked');
@@ -566,10 +575,11 @@ $('panel').addEventListener('submit',event => {
     payload.assigned = payload.assigned === 'true';
   }
   task(async () => {
-    await change(route,payload,{'teacher-groups':'Teacher groups saved','rename-group':'Group renamed','student-details':'Student saved',incident:'Incident recorded','resolve-incident':'Incident resolved',pickup:'Pickup recorded','pickup-contact':'Pickup contact authorized','void-pickup':'Pickup corrected',activities:payload.id ? 'Activity updated' : 'Activity created','teacher-group':payload.assigned ? 'Teacher assigned' : 'Teacher removed from group',groups:'Group created','student-group':'Student group saved',students:'Student added',teachers:'Teacher created','teacher-access':'Password reset and sessions revoked'}[route]);
+    await change(route,payload,{'group-message':'Message sent','teacher-groups':'Teacher groups saved','rename-group':'Group renamed','student-details':'Student saved',incident:'Incident recorded','resolve-incident':'Incident resolved',pickup:'Pickup recorded','pickup-contact':'Pickup contact authorized','void-pickup':'Pickup corrected',activities:payload.id ? 'Activity updated' : 'Activity created','teacher-group':payload.assigned ? 'Teacher assigned' : 'Teacher removed from group',groups:'Group created','student-group':'Student group saved',students:'Student added',teachers:'Teacher created','teacher-access':'Password reset and sessions revoked'}[route]);
   });
 });
 $('panel').addEventListener('click',event => {
+  if(event.target.closest('[data-refresh-messages]')){task(refresh);return;}
   if(event.target.closest('[data-shift-today]')&&!busy){$('date').value=data.today;$('date').dispatchEvent(new Event('change',{bubbles:true}));return;}
   const shortcut=event.target.closest('[data-dashboard-go]');
   if(shortcut&&!busy){$('tabs').querySelector('[data-tab="'+shortcut.dataset.dashboardGo+'"]')?.click();if(shortcut.dataset.dashboardGo==='incidents'){const drawer=$('panel').querySelector('[data-manage-key="record-incident"]');if(drawer)drawer.open=true;}$('panel').querySelector('form[data-form="incident"] select')?.focus();return;}
@@ -643,6 +653,7 @@ async function restoreAdminSession() {
   });
 }
 if (!native) await restoreAdminSession();
+
 
 
 
