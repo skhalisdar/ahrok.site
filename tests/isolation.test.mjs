@@ -11,20 +11,22 @@ test('root retains only root-specific runtime dependencies and never bundles app
  for(const p of ['pg','node-app-attest','google-auth-library','cbor','pdfkit'])assert.equal(pkg.dependencies[p],undefined,p);
  assert.equal(pkg.scripts['test:kite'],undefined);
  const next=read('next.config.ts');
- assert.doesNotMatch(next,/serverExternalPackages|outputFileTracingIncludes|async rewrites\(/);
- assert.doesNotMatch(next,/nycmc-compass\.vercel\.app|kite-five-wine\.vercel\.app/);
+ assert.doesNotMatch(next,/serverExternalPackages|outputFileTracingIncludes/);
+ assert.doesNotMatch(next,/nycmc-compass\.vercel\.app/);
 });
-test('root redirects are release-gated and only handle top-level navigation, not API posts',()=>{
+test('only /kite is reverse-proxied to the separate Kite Vercel project',()=>{
+ const next=read('next.config.ts');
+ assert.match(next,/async rewrites\(\)/);
+ assert.match(next,/beforeFiles/);
+ assert.ok(next.includes("source: '/kite', destination: 'https://kite-five-wine.vercel.app/kite/'"));
+ assert.ok(next.includes("source: '/kite/:path*', destination: 'https://kite-five-wine.vercel.app/kite/:path*'"));
+ assert.doesNotMatch(next,/source:\s*'\/kite'\s*,\s*destination:\s*'https:\/\/kite\.ahrok\.site/);
+ assert.doesNotMatch(next,/source:\s*'\/nycmccompass\/:path\*'/);
+});
+test('COMPASS still redirects to its own hostname',()=>{
  const next=read('next.config.ts');
  assert.match(next,/AHROK_SUBDOMAIN_CUTOVER !== 'enabled'/);
- for(const [oldPath,destination] of [
-  ['/kite','https://kite.ahrok.site/kite/'],
-  ['/nycmccompass','https://compass.ahrok.site/nycmccompass']
- ]) {
-  assert.ok(next.includes("source: '"+oldPath+"'"));
-  assert.ok(next.includes("destination: '"+destination+"'"));
- }
- assert.doesNotMatch(next,/source:\s*'\/kite\/:path\*'|source:\s*'\/nycmccompass\/:path\*'/);
+ assert.ok(next.includes("source: '/nycmccompass', destination: 'https://compass.ahrok.site/nycmccompass'"));
 });
 test('CI will block nonisolated root source from being deployed',()=>{
  const wf=read('.github/workflows/subdomain-isolation.yml');
