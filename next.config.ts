@@ -3,14 +3,12 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Disabled by default: redirect only after both independent services are proven ready.
-  // Paths remain compatible on the new browser origins during the first cutover.
+  // Redirect only landing pages. Never redirect legacy API POSTs across origins.
   async redirects() {
     if (process.env.AHROK_SUBDOMAIN_CUTOVER !== 'enabled') return []
     return [
       { source: '/kite', destination: 'https://kite.ahrok.site/kite/', permanent: false },
-      { source: '/kite/:path*', destination: 'https://kite.ahrok.site/kite/:path*', permanent: false },
       { source: '/nycmccompass', destination: 'https://compass.ahrok.site/nycmccompass', permanent: false },
-      { source: '/nycmccompass/:path*', destination: 'https://compass.ahrok.site/nycmccompass/:path*', permanent: false },
     ]
   },
   // COMPASS runs as a separate Vercel project; forward only its URL prefix.
