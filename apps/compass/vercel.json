@@ -1,5 +1,0 @@
-{
-  "version": 2,
-  "functions": {"api/index.mjs": {"includeFiles": "www/**"}},
-  "rewrites": [{"source": "/nycmccompass", "destination": "/api"}, {"source": "/nycmccompass/:path*", "destination": "/api"}]
-}

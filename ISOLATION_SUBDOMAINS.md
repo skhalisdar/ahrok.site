@@ -1,6 +1,6 @@
 # Three-project browser-origin isolation: staged preparation only
 
-**No deployment, DNS, database, account, credential or production route was changed.**
+**Staging-only root decoupling performed. No production deployment, DNS, database, account, credential or production route was changed.**
 
 ## Chosen target design
 - Root: `https://ahrok.site`, project `ahrok-site-website-creation`, source `skhalisdar/ahrok.site`.
@@ -12,9 +12,9 @@
 
 ## This preparation branch
 - Adds **inactive-by-default** redirect rules gated behind `AHROK_SUBDOMAIN_CUTOVER=enabled`.
-- Does not remove existing root-mounted Kite/COMPASS handlers yet. They are a **known active isolation gap** until approved source removal and root deployment.
+- Removes root-embedded Kite/COMPASS backend files and old handlers from THIS DRAFT BRANCH ONLY. Their dedicated GitHub repositories and all Neon datasets are untouched. Production still contains the legacy handlers until a separately tested, approved cutover.
 - Disables Vercel deployment from this branch.
-- Does not modify root's existing COMPASS external rewrite, live cookie or data behavior.
+- Removes the old COMPASS external reverse-proxy rewrite from THIS DRAFT BRANCH ONLY. Old root paths will stop serving application code after promotion, except for the two inactive-by-default landing-page redirects.
 - Existing root product demo localStorage keys stay untouched.
 
 ## Verified database inventory (read-only; no personally identifying records retrieved)
@@ -79,3 +79,9 @@ is given to remove the root embedded applications and their dependencies.
 
 A successful Next.js build or unit test is not a substitute for passing this
 strict root isolation gate. The root site is **not** ready to merge or deploy.
+
+## Source-ownership cleanup staged
+
+Root only retains the Ahrok website, contact form, and independent root-site product demos. All in-repo application copies under `vendor/kite`, `vendor/compass`, and `apps/compass`, plus root executable app routes, Kite server adapter, and backend-related root package dependencies have been deleted on the draft branch. The dedicated `skhalisdar/Kite` and `skhalisdar/nycmc-compass` repositories were not changed by this cleanup. The prior legacy browser reset-helper was specific to the old root-hosted Kite database and is intentionally retired with that copy; use a verified project-scoped recovery procedure instead of silently exposing its hardcoded database link.
+
+The `--enforce` isolation gate and root build **must** both pass on this branch. Until the two dedicated subdomains pass HTTPS, configuration, and live login tests, DO NOT merge this branch. Root's former `/api/mobile` endpoint will be removed; confirm all supported signed native builds continue using an independent Kite endpoint before publishing.

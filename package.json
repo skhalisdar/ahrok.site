@@ -1,5 +1,5 @@
 {
-  "name": "primer-starter",
+  "name": "ahrok-root-website",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -7,18 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:kite": "node --test tests/kite*.test.mjs"
+    "test:isolation": "node --test tests/isolation.test.mjs"
   },
   "dependencies": {
     "@primer/octicons-react": "^19.28.1",
     "@primer/primitives": "^11.9.0",
     "@primer/react": "^38.27.0",
-    "cbor": "10.0.12",
-    "google-auth-library": "11.3.4",
     "next": "^15.5.0",
-    "node-app-attest": "1.0.1",
-    "pdfkit": "0.17.2",
-    "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "resend": "^6.16.0",
