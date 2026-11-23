@@ -22,7 +22,7 @@ test('root redirects are release-gated and only handle top-level navigation, not
   ['/nycmccompass','https://compass.ahrok.site/nycmccompass']
  ]) {
   assert.ok(next.includes("source: '"+oldPath+"'"));
-  assert.ok(next.includes("destination: '"+destination+"'"));
+  assert.ok(next.includes("'"+destination+"'"),destination);
  }
  assert.doesNotMatch(next,/source:\s*'\/kite\/:path\*'|source:\s*'\/nycmccompass\/:path\*'/);
 });
@@ -37,4 +37,11 @@ test('root environment template contains no child-app credentials',()=>{
  assert.match(env,/AHROK_SUBDOMAIN_CUTOVER=disabled/);
  assert.match(env,/^RESEND_API_KEY=/m);
  assert.doesNotMatch(env,/^(?:KITE_|COMPASS_|DESK_|PGHOST|PGUSER|PGPASSWORD|DATABASE_URL)/m);
+});
+
+test('root QA redirects specifically to QA services, not production services',()=>{
+ const next=read('next.config.ts');
+ assert.match(next,/VERCEL_ENV === 'preview'/);
+ assert.match(next,/https:\/\/test-kite\.ahrok\.site\/kite\//);
+ assert.match(next,/https:\/\/test-compass\.ahrok\.site\/nycmccompass/);
 });
