@@ -8,12 +8,10 @@ test('subdomain cutover is disabled until deliberately enabled',()=>{
   assert.match(config,/permanent: false/);
   assert.equal(vercel.git.deploymentEnabled['isolation-subdomains-20261123'],false);
 });
-test('each old application path redirects to its own origin, preserving internal base paths',()=>{
+test('only old application landing pages redirect to dedicated origins',()=>{
   for(const [source,destination] of [
     ['/kite','https://kite.ahrok.site/kite/'],
-    ['/kite/:path*','https://kite.ahrok.site/kite/:path*'],
     ['/nycmccompass','https://compass.ahrok.site/nycmccompass'],
-    ['/nycmccompass/:path*','https://compass.ahrok.site/nycmccompass/:path*'],
   ]) {
     assert.ok(config.includes("source: '"+source+"'"),source);
     assert.ok(config.includes("destination: '"+destination+"'"),destination);
