@@ -20,7 +20,7 @@ jobs:
       - run: pnpm test:isolation
       - run: pnpm build
   strict_isolation_gate:
-    name: Strict isolation security gate — expected BLOCKED until approved decoupling
+    name: Strict isolation security gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
