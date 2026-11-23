@@ -31,3 +31,10 @@ test('CI will block nonisolated root source from being deployed',()=>{
  assert.match(wf,/node scripts\/isolation-gate\.mjs --enforce/);
  assert.match(wf,/pnpm test:isolation/);
 });
+
+test('root environment template contains no child-app credentials',()=>{
+ const env=read('.env.example');
+ assert.match(env,/AHROK_SUBDOMAIN_CUTOVER=disabled/);
+ assert.match(env,/^RESEND_API_KEY=/m);
+ assert.doesNotMatch(env,/^(?:KITE_|COMPASS_|DESK_|PGHOST|PGUSER|PGPASSWORD|DATABASE_URL)/m);
+});
