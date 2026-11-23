@@ -36,3 +36,45 @@
 **Important:** URL path prefixes on the same hostname are not browser security boundaries. Distinct subdomains are separate origins; absent a cookie Domain attribute, `__Host-` cookies are host-only. `Path=/` is required for `__Host-`; do NOT change it to `/kite` or `/nycmccompass` while retaining that prefix.
 
 No migration, merge, deletion, routing activation or production deployment may occur without separate explicit approval.
+
+
+## Recovery checkpoint completed (2026-11-23)
+
+The two established, populated Neon datasets each now have a manual snapshot
+AND a restored, distinct **non-default** branch. No production branch was replaced.
+
+| Dataset | Snapshot | Restoration branch | Integrity check |
+|---|---|---|---|
+| Established Kite: 86 students, 7 users, 4 groups | `snap-late-block-bdvn9ha0` | `br-little-breeze-bdr1p6px` | All 22 public tables match source by row count and digest |
+| Populated COMPASS: 21 students, 1 instructor | `snap-bitter-cherry-bdlvfrc8` | `br-royal-shape-bd92c9av` | All 6 public tables match source by row count and digest |
+
+The source projects were `billowing-sunset-52888502` (Kite records) and
+`shiny-thunder-91747747` (COMPASS records), respectively. This is a
+validated Neon-level recovery checkpoint, **not** an independent off-platform
+`pg_dump`. Do not delete the snapshots or restoration branches. On-platform
+snapshot retention and access share project ownership, so independent encrypted
+archives are still required before risky production changes.
+
+## Verification of DNS / routing authorization (2026-11-23)
+
+- Vercel reports an `ahrok.site` apex project-domain mapping to
+  `prj_rsr3nDHiqYCtV1FW17V7pxME0CoW`.
+- DNS includes an existing wildcard ALIAS, but no explicit `kite` or
+  `compass` DNS records. A wildcard alone does **not** assign a hostname to
+  the intended Vercel project or establish certificate and app readiness.
+- The ChatGPT Vercel integration can list the team and its domain/DNS records,
+  but its project list is empty and project/environment reads return 404.
+- Therefore no new domain assignment or production environment change is
+  approved or performed.
+
+## Strict root security gate
+
+`node scripts/isolation-gate.mjs --report-only` prints current independent
+ownership violations without changing anything. `--enforce` returns exit
+status 2 whenever forbidden embedded backend files, package dependencies,
+or root proxy handlers remain. The staging GitHub workflow runs this as a
+**separate intentionally failing security job** until explicit authorization
+is given to remove the root embedded applications and their dependencies.
+
+A successful Next.js build or unit test is not a substitute for passing this
+strict root isolation gate. The root site is **not** ready to merge or deploy.
