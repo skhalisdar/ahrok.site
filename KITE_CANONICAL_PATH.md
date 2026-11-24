@@ -1,7 +1,7 @@
 # Canonical Kite web URL change
 
 The web administrator portal is served at **https://ahrok.site/kite**.
-The Ahrok root Next.js deployment proxies only `/kite` and `/kite/*` to the independent Kite Vercel project via its stable production alias. No Kite backend files or Neon secrets belong in this repo.
+The Ahrok root Next.js deployment proxies only `/kite` and `/kite/*` to the independent Kite Vercel project via the verified Kite custom hostname (`kite.ahrok.site`) to avoid deployment authentication on protected `*.vercel.app` aliases. No Kite backend files or Neon secrets belong in this repo.
 
 NYCMC COMPASS still redirects to `https://compass.ahrok.site/nycmccompass` and retains its separate production project and database.
 

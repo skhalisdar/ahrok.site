@@ -10,12 +10,13 @@ const nextConfig: NextConfig = {
     ]
   },
   // The Kite application stays in its own Vercel project and Neon database.
-  // Proxy only its dedicated URL prefix; never import Kite backend code into root.
+  // Proxy only its dedicated URL prefix through Kite's verified custom domain.
+  // Do not target protected *.vercel.app aliases or import backend code.
   async rewrites() {
     return {
       beforeFiles: [
-        { source: '/kite', destination: 'https://kite-five-wine.vercel.app/kite/' },
-        { source: '/kite/:path*', destination: 'https://kite-five-wine.vercel.app/kite/:path*' },
+        { source: '/kite', destination: 'https://kite.ahrok.site/kite/' },
+        { source: '/kite/:path*', destination: 'https://kite.ahrok.site/kite/:path*' },
       ],
     }
   },

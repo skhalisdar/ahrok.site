@@ -18,9 +18,9 @@ test('only /kite is reverse-proxied to the separate Kite Vercel project',()=>{
  const next=read('next.config.ts');
  assert.match(next,/async rewrites\(\)/);
  assert.match(next,/beforeFiles/);
- assert.ok(next.includes("source: '/kite', destination: 'https://kite-five-wine.vercel.app/kite/'"));
- assert.ok(next.includes("source: '/kite/:path*', destination: 'https://kite-five-wine.vercel.app/kite/:path*'"));
- assert.doesNotMatch(next,/source:\s*'\/kite'\s*,\s*destination:\s*'https:\/\/kite\.ahrok\.site/);
+ assert.ok(next.includes("source: '/kite', destination: 'https://kite.ahrok.site/kite/'"));
+ assert.ok(next.includes("source: '/kite/:path*', destination: 'https://kite.ahrok.site/kite/:path*'"));
+ assert.doesNotMatch(next,/kite-five-wine\.vercel\.app/);
  assert.doesNotMatch(next,/source:\s*'\/nycmccompass\/:path\*'/);
 });
 test('COMPASS still redirects to its own hostname',()=>{
